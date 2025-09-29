@@ -1,547 +1,821 @@
+'use client';
+
 /**
  * Document Templates Management Page
+ * T073: Template management interface with search, filtering, and actions
+ * Updated to work with new API structure and modern UI components
  */
 
-'use client'
-
-import { useState, useEffect } from 'react'
-import { useAuth } from '@/lib/hooks/useAuth'
-import { useRouter } from 'next/navigation'
+import React, { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { 
-  DocumentTextIcon,
-  PlusIcon,
-  MagnifyingGlassIcon,
-  FunnelIcon,
-  EyeIcon,
-  PencilSquareIcon,
-  DocumentDuplicateIcon,
-  TrashIcon,
-  ArrowDownTrayIcon,
-  ChartBarIcon,
-  ExclamationTriangleIcon
-} from '@heroicons/react/24/outline'
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { 
+  Search, 
+  Plus, 
+  Filter, 
+  MoreVertical, 
+  Eye, 
+  Edit, 
+  Copy, 
+  Download, 
+  Trash2,
+  FileText,
+  User,
+  Tag,
+  BarChart3,
+  RefreshCw
+} from 'lucide-react';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator
+} from '@/components/ui/dropdown-menu';
+import { toast } from '@/hooks/use-toast';
+import Link from 'next/link';
 
 interface DocumentTemplate {
-  id: string
-  template_name: string
-  template_code: string
-  description?: string
-  category: string
-  practice_area: string
-  document_type: string
-  is_fillable: boolean
-  is_active: boolean
-  is_public: boolean
-  usage_count: number
-  last_used_date?: string
-  version_number: string
-  created_by: {
-    first_name: string
-    last_name: string
-  }
-  created_at: string
-  permission_level: string
+  id: string;
+  name: string;
+  description?: string;
+  document_type: string;
+  practice_area?: string;
+  jurisdiction?: string;
+  template_file_path: string;
+  template_file_name: string;
+  template_file_size: number;
+  template_version: string;
+  field_definitions: unknown[];
+  required_fields: string[];
+  status: 'draft' | 'active' | 'deprecated' | 'archived';
+  category?: string;
+  tags: string[];
+  usage_count: number;
+  last_used_at?: Date;
+  is_latest_version: boolean;
+  is_public: boolean;
+  allowed_roles: string[];
+  created_by: string;
+  created_at: Date;
+  updated_at: Date;
 }
 
-interface TemplateFilters {
-  category: string
-  practice_area: string
-  document_type: string
-  is_public: string
-  created_by: string
+interface SearchFilters {
+  query: string;
+  document_type: string[];
+  practice_area: string[];
+  category: string[];
+  tags: string[];
+  status: string[];
+  is_public?: boolean;
 }
+
+const DOCUMENT_TYPES = [
+  'contract', 'trust', 'will', 'power_of_attorney', 'operating_agreement',
+  'lease', 'deed', 'application', 'insurance', 'correspondence',
+  'memo', 'research', 'pleading', 'motion', 'brief', 'discovery',
+  'settlement', 'other'
+];
+
+const PRACTICE_AREAS = [
+  'estate_planning', 'trust_administration', 'business_law', 
+  'real_estate', 'family_law', 'litigation', 'other'
+];
+
+const TEMPLATE_CATEGORIES = [
+  'contracts', 'estate_planning', 'business_formation', 'real_estate',
+  'litigation', 'letters', 'forms', 'other'
+];
+
+const STATUS_OPTIONS = ['draft', 'active', 'deprecated', 'archived'];
 
 export default function TemplatesPage() {
-  const { user } = useAuth()
-  const router = useRouter()
+  const _router = useRouter();
+  const [templates, setTemplates] = useState<DocumentTemplate[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(20);
   
-  const [templates, setTemplates] = useState<DocumentTemplate[]>([])
-  const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [showFilters, setShowFilters] = useState(false)
-  const [filters, setFilters] = useState<TemplateFilters>({
-    category: 'all',
-    practice_area: 'all',
-    document_type: 'all',
-    is_public: 'all',
-    created_by: 'all'
-  })
-  const [selectedTemplates, setSelectedTemplates] = useState<string[]>([])
-
-  // Check permissions
-  const canViewTemplates = user && ['admin', 'associate_attorney', 'paralegal', 'assistant'].includes(user.role)
-  const canCreateTemplates = user && ['admin', 'associate_attorney', 'paralegal'].includes(user.role)
-  const canEditTemplates = user && ['admin', 'associate_attorney', 'paralegal'].includes(user.role)
-  const canDeleteTemplates = user && ['admin', 'associate_attorney'].includes(user.role)
-
-  if (!canViewTemplates) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <ExclamationTriangleIcon className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h2>
-          <p className="text-gray-600 mb-4">You don't have permission to view document templates.</p>
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="btn-primary"
-          >
-            Return to Dashboard
-          </button>
-        </div>
-      </div>
-    )
-  }
+  // Search and filter state
+  const [filters, setFilters] = useState<SearchFilters>({
+    query: '',
+    document_type: [],
+    practice_area: [],
+    category: [],
+    tags: [],
+    status: [],
+  });
+  
+  // UI state
+  const [showFilters, setShowFilters] = useState(false);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [_selectedTemplates, _setSelectedTemplates] = useState<string[]>([]);
+  
+  // Create template form state
+  const [createForm, setCreateForm] = useState({
+    name: '',
+    description: '',
+    document_type: '',
+    practice_area: '',
+    jurisdiction: '',
+    category: '',
+    tags: [] as string[],
+    is_public: false,
+    allowed_roles: [] as string[]
+  });
 
   // Load templates
-  useEffect(() => {
-    const loadTemplates = async () => {
-      try {
-        setLoading(true)
-        
-        const params = new URLSearchParams()
-        if (searchTerm) params.set('search', searchTerm)
-        if (filters.category !== 'all') params.set('category', filters.category)
-        if (filters.practice_area !== 'all') params.set('practice_area', filters.practice_area)
-        if (filters.document_type !== 'all') params.set('document_type', filters.document_type)
-        if (filters.is_public !== 'all') params.set('is_public', filters.is_public)
-
-        const response = await fetch(`/api/templates?${params}`)
-        if (response.ok) {
-          const result = await response.json()
-          setTemplates(result.data || result.templates || [])
-        } else {
-          // Set mock data for demonstration
-          setTemplates(getMockTemplates())
-        }
-      } catch (error) {
-        console.error('Error loading templates:', error)
-        // Set mock data for demonstration
-        setTemplates(getMockTemplates())
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    const debounceTimer = setTimeout(loadTemplates, 300)
-    return () => clearTimeout(debounceTimer)
-  }, [searchTerm, filters])
-
-  const handleUseTemplate = (templateId: string) => {
-    router.push(`/templates/${templateId}/use`)
-  }
-
-  const handleEditTemplate = (templateId: string) => {
-    router.push(`/templates/${templateId}/edit`)
-  }
-
-  const handleDuplicateTemplate = async (templateId: string) => {
+  const loadTemplates = useCallback(async () => {
+    setLoading(true);
     try {
-      const response = await fetch(`/api/templates/${templateId}/duplicate`, {
-        method: 'POST'
-      })
-      
+      const params = new URLSearchParams({
+        limit: pageSize.toString(),
+        offset: ((currentPage - 1) * pageSize).toString(),
+        sort_by: 'usage_count',
+        sort_order: 'desc'
+      });
+
+      // Add search query
+      if (filters.query) {
+        params.append('query', filters.query);
+      }
+
+      // Add filters
+      if (filters.document_type.length > 0) {
+        params.append('document_type', filters.document_type.join(','));
+      }
+      if (filters.practice_area.length > 0) {
+        params.append('practice_area', filters.practice_area.join(','));
+      }
+      if (filters.category.length > 0) {
+        params.append('category', filters.category.join(','));
+      }
+      if (filters.status.length > 0) {
+        params.append('status', filters.status.join(','));
+      }
+      if (filters.tags.length > 0) {
+        params.append('tags', filters.tags.join(','));
+      }
+      if (filters.is_public !== undefined) {
+        params.append('is_public', filters.is_public.toString());
+      }
+
+      const response = await fetch(`/api/templates?${params}`);
       if (response.ok) {
-        const result = await response.json()
-        router.push(`/templates/${result.data.id}/edit`)
+        const data = await response.json();
+        setTemplates(data.templates || []);
+        setTotalCount(data.total || 0);
       } else {
-        alert('Failed to duplicate template')
+        // Set mock data for demonstration
+        setTemplates(getMockTemplates());
+        setTotalCount(getMockTemplates().length);
       }
     } catch (error) {
-      console.error('Error duplicating template:', error)
-      alert('Error duplicating template')
+      toast({
+        title: 'Error loading templates',
+        description: error instanceof Error ? error.message : 'An unknown error occurred',
+        variant: 'destructive'
+      });
+      // Set mock data for demonstration
+      setTemplates(getMockTemplates());
+      setTotalCount(getMockTemplates().length);
+    } finally {
+      setLoading(false);
     }
-  }
+  }, [currentPage, pageSize, filters]);
 
-  const handleDeleteTemplate = async (templateId: string) => {
-    if (!window.confirm('Are you sure you want to delete this template? This action cannot be undone.')) {
-      return
+  // Load templates on mount and filter changes
+  useEffect(() => {
+    loadTemplates();
+  }, [loadTemplates]);
+
+  // Create new template
+  const createTemplate = async () => {
+    try {
+      const response = await fetch('/api/templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...createForm,
+          template_file_path: `/templates/${createForm.name.toLowerCase().replace(/\s+/g, '_')}.docx`,
+          template_file_name: `${createForm.name}.docx`,
+          template_file_size: 0
+        })
+      });
+
+      if (response.ok) {
+        const newTemplate = await response.json();
+        setTemplates(prev => [newTemplate, ...prev]);
+        setShowCreateDialog(false);
+        setCreateForm({
+          name: '',
+          description: '',
+          document_type: '',
+          practice_area: '',
+          jurisdiction: '',
+          category: '',
+          tags: [],
+          is_public: false,
+          allowed_roles: []
+        });
+        toast({
+          title: 'Template created',
+          description: 'Your template has been created successfully'
+        });
+      } else {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to create template');
+      }
+    } catch (error) {
+      toast({
+        title: 'Error creating template',
+        description: error instanceof Error ? error.message : 'An unknown error occurred',
+        variant: 'destructive'
+      });
     }
+  };
 
+  const duplicateTemplate = async (templateId: string) => {
+    try {
+      const template = templates.find(t => t.id === templateId);
+      if (!template) return;
+
+      const response = await fetch('/api/templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...template,
+          name: `${template.name} (Copy)`,
+          id: undefined
+        })
+      });
+
+      if (response.ok) {
+        const duplicatedTemplate = await response.json();
+        setTemplates(prev => [duplicatedTemplate, ...prev]);
+        toast({
+          title: 'Template duplicated',
+          description: 'Template has been duplicated successfully'
+        });
+      } else {
+        throw new Error('Failed to duplicate template');
+      }
+    } catch (error) {
+      toast({
+        title: 'Error duplicating template',
+        description: error instanceof Error ? error.message : 'An unknown error occurred',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const deleteTemplate = async (templateId: string) => {
     try {
       const response = await fetch(`/api/templates/${templateId}`, {
         method: 'DELETE'
-      })
-      
+      });
+
       if (response.ok) {
-        setTemplates(prev => prev.filter(t => t.id !== templateId))
+        setTemplates(prev => prev.filter(t => t.id !== templateId));
+        toast({
+          title: 'Template deleted',
+          description: 'Template has been deleted successfully'
+        });
       } else {
-        alert('Failed to delete template')
+        throw new Error('Failed to delete template');
       }
     } catch (error) {
-      console.error('Error deleting template:', error)
-      alert('Error deleting template')
+      toast({
+        title: 'Error deleting template',
+        description: error instanceof Error ? error.message : 'An unknown error occurred',
+        variant: 'destructive'
+      });
     }
-  }
+  };
 
-  const handleBulkAction = async (action: string) => {
-    if (selectedTemplates.length === 0) {
-      alert('Please select templates first')
-      return
+  const getStatusBadgeColor = (status: string) => {
+    switch (status) {
+      case 'active': return 'bg-green-100 text-green-800';
+      case 'draft': return 'bg-gray-100 text-gray-800';
+      case 'deprecated': return 'bg-yellow-100 text-yellow-800';
+      case 'archived': return 'bg-blue-100 text-blue-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
+  };
 
-    switch (action) {
-      case 'delete':
-        if (window.confirm(`Are you sure you want to delete ${selectedTemplates.length} template(s)?`)) {
-          // TODO: Implement bulk delete
-          console.log('Bulk delete:', selectedTemplates)
-        }
-        break
-      case 'export':
-        // TODO: Implement bulk export
-        console.log('Bulk export:', selectedTemplates)
-        break
-      default:
-        break
+  const _formatFileSize = (bytes: number) => {
+    const units = ['B', 'KB', 'MB', 'GB'];
+    let size = bytes;
+    let unitIndex = 0;
+    while (size >= 1024 && unitIndex < units.length - 1) {
+      size /= 1024;
+      unitIndex++;
     }
-  }
+    return `${size.toFixed(1)} ${units[unitIndex]}`;
+  };
 
-  const filteredTemplates = templates.filter(template => {
-    if (searchTerm && !template.template_name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-        !template.description?.toLowerCase().includes(searchTerm.toLowerCase())) {
-      return false
-    }
-    return true
-  })
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading templates...</p>
-        </div>
-      </div>
-    )
-  }
+  const formatDate = (date: Date | string) => {
+    return new Date(date).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="container mx-auto py-6 space-y-6">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
-        <div className="mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 flex items-center">
-                <DocumentTextIcon className="h-8 w-8 mr-3 text-blue-600" />
-                Document Templates
-              </h1>
-              <p className="text-gray-600 mt-1">
-                Manage and use document templates for your legal practice
-              </p>
-            </div>
-
-            <div className="flex items-center space-x-3">
-              {canCreateTemplates && (
-                <button
-                  onClick={() => router.push('/templates/new')}
-                  className="btn-primary flex items-center"
-                >
-                  <PlusIcon className="h-5 w-5 mr-2" />
-                  New Template
-                </button>
-              )}
-              
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="btn-secondary flex items-center"
-              >
-                <FunnelIcon className="h-5 w-5 mr-2" />
-                Filters
-              </button>
-            </div>
-          </div>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Template Management</h1>
+          <p className="text-muted-foreground">
+            Manage document templates for your legal practice
+          </p>
         </div>
+        
+        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="w-4 h-4 mr-2" />
+              New Template
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Create New Template</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="name">Template Name</Label>
+                  <Input
+                    id="name"
+                    value={createForm.name}
+                    onChange={(e) => setCreateForm(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="Enter template name"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="document_type">Document Type</Label>
+                  <Select 
+                    value={createForm.document_type} 
+                    onValueChange={(value) => setCreateForm(prev => ({ ...prev, document_type: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select document type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DOCUMENT_TYPES.map(type => (
+                        <SelectItem key={type} value={type}>
+                          {type.replace('_', ' ')}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={createForm.description}
+                  onChange={(e) => setCreateForm(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Enter template description"
+                  rows={3}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="practice_area">Practice Area</Label>
+                  <Select 
+                    value={createForm.practice_area} 
+                    onValueChange={(value) => setCreateForm(prev => ({ ...prev, practice_area: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select practice area" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PRACTICE_AREAS.map(area => (
+                        <SelectItem key={area} value={area}>
+                          {area.replace('_', ' ')}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="category">Category</Label>
+                  <Select 
+                    value={createForm.category} 
+                    onValueChange={(value) => setCreateForm(prev => ({ ...prev, category: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TEMPLATE_CATEGORIES.map(category => (
+                        <SelectItem key={category} value={category}>
+                          {category.replace('_', ' ')}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <Button onClick={createTemplate} className="w-full">
+                Create Template
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      <div className="mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Search and Filters */}
-        <div className="bg-white rounded-lg shadow mb-6 p-6">
-          {/* Search Bar */}
-          <div className="flex items-center space-x-4 mb-4">
+      {/* Search and Filters */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-4 mb-4">
             <div className="flex-1 relative">
-              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="input-field pl-10"
-                placeholder="Search templates by name or description..."
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+              <Input
+                placeholder="Search templates..."
+                value={filters.query}
+                onChange={(e) => setFilters(prev => ({ ...prev, query: e.target.value }))}
+                className="pl-10"
               />
             </div>
-            
-            {selectedTemplates.length > 0 && (
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-600">
-                  {selectedTemplates.length} selected
-                </span>
-                {canDeleteTemplates && (
-                  <button
-                    onClick={() => handleBulkAction('delete')}
-                    className="btn-secondary text-sm"
-                  >
-                    Delete Selected
-                  </button>
-                )}
-                <button
-                  onClick={() => handleBulkAction('export')}
-                  className="btn-secondary text-sm"
-                >
-                  Export Selected
-                </button>
-              </div>
-            )}
+            <Button
+              variant="outline"
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center gap-2"
+            >
+              <Filter className="w-4 h-4" />
+              Filters
+            </Button>
+            <Button
+              variant="outline"
+              onClick={loadTemplates}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Refresh
+            </Button>
           </div>
 
-          {/* Filters */}
           {showFilters && (
-            <div className="border-t border-gray-200 pt-4">
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div className="border-t pt-4 space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Category
-                  </label>
-                  <select
-                    value={filters.category}
-                    onChange={(e) => setFilters(prev => ({ ...prev, category: e.target.value }))}
-                    className="input-field text-sm"
-                  >
-                    <option value="all">All Categories</option>
-                    <option value="contracts">Contracts & Agreements</option>
-                    <option value="estate_planning">Estate Planning</option>
-                    <option value="business_formation">Business Formation</option>
-                    <option value="real_estate">Real Estate</option>
-                    <option value="litigation">Litigation</option>
-                    <option value="letters">Letters & Correspondence</option>
-                    <option value="forms">Forms & Applications</option>
-                  </select>
+                  <Label>Document Type</Label>
+                  <Select onValueChange={(value) => {
+                    if (value && !filters.document_type.includes(value)) {
+                      setFilters(prev => ({
+                        ...prev,
+                        document_type: [...prev.document_type, value]
+                      }));
+                    }
+                  }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DOCUMENT_TYPES.map(type => (
+                        <SelectItem key={type} value={type}>
+                          {type.replace('_', ' ')}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Practice Area
-                  </label>
-                  <select
-                    value={filters.practice_area}
-                    onChange={(e) => setFilters(prev => ({ ...prev, practice_area: e.target.value }))}
-                    className="input-field text-sm"
-                  >
-                    <option value="all">All Practice Areas</option>
-                    <option value="estate_planning">Estate Planning</option>
-                    <option value="trust_administration">Trust Administration</option>
-                    <option value="business_law">Business Law</option>
-                    <option value="real_estate">Real Estate</option>
-                    <option value="family_law">Family Law</option>
-                    <option value="litigation">Litigation</option>
-                  </select>
+                  <Label>Practice Area</Label>
+                  <Select onValueChange={(value) => {
+                    if (value && !filters.practice_area.includes(value)) {
+                      setFilters(prev => ({
+                        ...prev,
+                        practice_area: [...prev.practice_area, value]
+                      }));
+                    }
+                  }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select area" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PRACTICE_AREAS.map(area => (
+                        <SelectItem key={area} value={area}>
+                          {area.replace('_', ' ')}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Document Type
-                  </label>
-                  <select
-                    value={filters.document_type}
-                    onChange={(e) => setFilters(prev => ({ ...prev, document_type: e.target.value }))}
-                    className="input-field text-sm"
-                  >
-                    <option value="all">All Types</option>
-                    <option value="contract">Contract</option>
-                    <option value="letter">Letter</option>
-                    <option value="form">Form</option>
-                    <option value="pleading">Pleading</option>
-                    <option value="notice">Notice</option>
-                    <option value="agreement">Agreement</option>
-                  </select>
+                  <Label>Category</Label>
+                  <Select onValueChange={(value) => {
+                    if (value && !filters.category.includes(value)) {
+                      setFilters(prev => ({
+                        ...prev,
+                        category: [...prev.category, value]
+                      }));
+                    }
+                  }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TEMPLATE_CATEGORIES.map(category => (
+                        <SelectItem key={category} value={category}>
+                          {category.replace('_', ' ')}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Visibility
-                  </label>
-                  <select
-                    value={filters.is_public}
-                    onChange={(e) => setFilters(prev => ({ ...prev, is_public: e.target.value }))}
-                    className="input-field text-sm"
-                  >
-                    <option value="all">All Templates</option>
-                    <option value="true">Public</option>
-                    <option value="false">Private</option>
-                  </select>
+                  <Label>Status</Label>
+                  <Select onValueChange={(value) => {
+                    if (value && !filters.status.includes(value)) {
+                      setFilters(prev => ({
+                        ...prev,
+                        status: [...prev.status, value]
+                      }));
+                    }
+                  }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {STATUS_OPTIONS.map(status => (
+                        <SelectItem key={status} value={status}>
+                          {status}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
+              </div>
 
-                <div className="flex items-end">
-                  <button
-                    onClick={() => setFilters({
-                      category: 'all',
-                      practice_area: 'all',
-                      document_type: 'all',
-                      is_public: 'all',
-                      created_by: 'all'
-                    })}
-                    className="btn-secondary text-sm w-full"
+              {/* Active Filters */}
+              <div className="flex flex-wrap gap-2">
+                {filters.document_type.map(type => (
+                  <Badge 
+                    key={type} 
+                    variant="secondary" 
+                    className="cursor-pointer"
+                    onClick={() => setFilters(prev => ({
+                      ...prev,
+                      document_type: prev.document_type.filter(t => t !== type)
+                    }))}
                   >
-                    Clear Filters
-                  </button>
-                </div>
+                    {type} ×
+                  </Badge>
+                ))}
+                {filters.practice_area.map(area => (
+                  <Badge 
+                    key={area} 
+                    variant="secondary" 
+                    className="cursor-pointer"
+                    onClick={() => setFilters(prev => ({
+                      ...prev,
+                      practice_area: prev.practice_area.filter(a => a !== area)
+                    }))}
+                  >
+                    {area} ×
+                  </Badge>
+                ))}
+                {filters.category.map(category => (
+                  <Badge 
+                    key={category} 
+                    variant="secondary" 
+                    className="cursor-pointer"
+                    onClick={() => setFilters(prev => ({
+                      ...prev,
+                      category: prev.category.filter(c => c !== category)
+                    }))}
+                  >
+                    {category} ×
+                  </Badge>
+                ))}
+                {filters.status.map(status => (
+                  <Badge 
+                    key={status} 
+                    variant="secondary" 
+                    className="cursor-pointer"
+                    onClick={() => setFilters(prev => ({
+                      ...prev,
+                      status: prev.status.filter(s => s !== status)
+                    }))}
+                  >
+                    {status} ×
+                  </Badge>
+                ))}
               </div>
             </div>
           )}
-        </div>
+        </CardContent>
+      </Card>
 
-        {/* Templates Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredTemplates.map((template) => (
-            <div key={template.id} className="bg-white rounded-lg shadow hover:shadow-md transition-shadow">
-              <div className="p-6">
-                {/* Template Header */}
+      {/* Templates Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {loading ? (
+          Array.from({ length: 6 }).map((_, i) => (
+            <Card key={i} className="animate-pulse">
+              <CardContent className="p-6">
+                <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
+                <div className="h-3 bg-muted rounded w-1/2 mb-4"></div>
+                <div className="h-20 bg-muted rounded mb-4"></div>
+                <div className="flex justify-between">
+                  <div className="h-3 bg-muted rounded w-1/4"></div>
+                  <div className="h-3 bg-muted rounded w-1/4"></div>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          templates.map((template) => (
+            <Card key={template.id} className="hover:shadow-md transition-shadow">
+              <CardContent className="p-6">
                 <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-start">
-                    <input
-                      type="checkbox"
-                      checked={selectedTemplates.includes(template.id)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedTemplates(prev => [...prev, template.id])
-                        } else {
-                          setSelectedTemplates(prev => prev.filter(id => id !== template.id))
-                        }
-                      }}
-                      className="h-4 w-4 text-blue-600 rounded mr-3 mt-1"
-                    />
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                        {template.template_name}
-                      </h3>
-                      <p className="text-sm text-gray-500">
-                        {template.template_code}
-                      </p>
-                    </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-lg mb-1">{template.name}</h3>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      v{template.template_version}
+                    </p>
                   </div>
-                  
-                  <div className="flex items-center">
+                  <div className="flex items-center gap-2">
+                    <Badge className={getStatusBadgeColor(template.status)}>
+                      {template.status}
+                    </Badge>
                     {template.is_public && (
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 mr-2">
-                        Public
-                      </span>
-                    )}
-                    {template.is_fillable && (
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        Fillable
-                      </span>
+                      <Badge variant="outline">Public</Badge>
                     )}
                   </div>
                 </div>
 
-                {/* Template Details */}
+                {template.description && (
+                  <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                    {template.description}
+                  </p>
+                )}
+
                 <div className="space-y-2 mb-4">
-                  {template.description && (
-                    <p className="text-sm text-gray-600 line-clamp-2">
-                      {template.description}
-                    </p>
-                  )}
-                  
-                  <div className="flex items-center text-xs text-gray-500 space-x-4">
-                    <span>{template.category.replace('_', ' ')}</span>
-                    <span>•</span>
-                    <span>{template.practice_area.replace('_', ' ')}</span>
+                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <Tag className="w-3 h-3" />
+                      {template.document_type.replace('_', ' ')}
+                    </span>
+                    {template.practice_area && (
+                      <span>{template.practice_area.replace('_', ' ')}</span>
+                    )}
                   </div>
                   
-                  <div className="flex items-center text-xs text-gray-500 space-x-4">
-                    <span className="flex items-center">
-                      <ChartBarIcon className="h-3 w-3 mr-1" />
+                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <BarChart3 className="w-3 h-3" />
                       Used {template.usage_count} times
                     </span>
-                    <span>•</span>
-                    <span>v{template.version_number}</span>
+                    <span className="flex items-center gap-1">
+                      <User className="w-3 h-3" />
+                      {template.created_by}
+                    </span>
                   </div>
+
+                  {template.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {template.tags.slice(0, 3).map(tag => (
+                        <Badge key={tag} variant="outline" className="text-xs">
+                          {tag}
+                        </Badge>
+                      ))}
+                      {template.tags.length > 3 && (
+                        <span className="text-xs text-muted-foreground">
+                          +{template.tags.length - 3} more
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
 
-                {/* Template Footer */}
-                <div className="flex items-center justify-between pt-3 border-t border-gray-200">
-                  <div className="text-xs text-gray-500">
-                    By {template.created_by.first_name} {template.created_by.last_name}
+                <div className="flex items-center justify-between pt-4 border-t">
+                  <div className="text-xs text-muted-foreground">
+                    {formatDate(template.updated_at)}
                   </div>
                   
-                  <div className="flex items-center space-x-1">
-                    <button
-                      onClick={() => handleUseTemplate(template.id)}
-                      className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
-                      title="Use Template"
-                    >
-                      <DocumentDuplicateIcon className="h-4 w-4" />
-                    </button>
-                    
-                    <button
-                      onClick={() => router.push(`/templates/${template.id}`)}
-                      className="p-2 text-gray-400 hover:text-green-600 transition-colors"
-                      title="View Template"
-                    >
-                      <EyeIcon className="h-4 w-4" />
-                    </button>
-                    
-                    {canEditTemplates && (
-                      <button
-                        onClick={() => handleEditTemplate(template.id)}
-                        className="p-2 text-gray-400 hover:text-yellow-600 transition-colors"
-                        title="Edit Template"
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm">
+                        <MoreVertical className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem asChild>
+                        <Link href={`/templates/${template.id}`}>
+                          <Eye className="w-4 h-4 mr-2" />
+                          View
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href={`/templates/${template.id}/edit`}>
+                          <Edit className="w-4 h-4 mr-2" />
+                          Edit
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => duplicateTemplate(template.id)}
                       >
-                        <PencilSquareIcon className="h-4 w-4" />
-                      </button>
-                    )}
-                    
-                    {canEditTemplates && (
-                      <button
-                        onClick={() => handleDuplicateTemplate(template.id)}
-                        className="p-2 text-gray-400 hover:text-purple-600 transition-colors"
-                        title="Duplicate Template"
+                        <Copy className="w-4 h-4 mr-2" />
+                        Duplicate
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem>
+                        <Download className="w-4 h-4 mr-2" />
+                        Download
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        className="text-destructive"
+                        onClick={() => deleteTemplate(template.id)}
                       >
-                        <DocumentDuplicateIcon className="h-4 w-4" />
-                      </button>
-                    )}
-                    
-                    {canDeleteTemplates && template.permission_level === 'admin' && (
-                      <button
-                        onClick={() => handleDeleteTemplate(template.id)}
-                        className="p-2 text-gray-400 hover:text-red-600 transition-colors"
-                        title="Delete Template"
-                      >
-                        <TrashIcon className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Empty State */}
-        {filteredTemplates.length === 0 && (
-          <div className="text-center py-12">
-            <DocumentTextIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No templates found</h3>
-            <p className="text-gray-600 mb-6">
-              {searchTerm || Object.values(filters).some(f => f !== 'all')
-                ? 'Try adjusting your search or filters'
-                : canCreateTemplates 
-                  ? 'Get started by creating your first template'
-                  : 'No templates are available yet'
-              }
-            </p>
-            {canCreateTemplates && (!searchTerm && Object.values(filters).every(f => f === 'all')) && (
-              <button
-                onClick={() => router.push('/templates/new')}
-                className="btn-primary"
-              >
-                <PlusIcon className="h-5 w-5 mr-2" />
-                Create First Template
-              </button>
-            )}
-          </div>
+              </CardContent>
+            </Card>
+          ))
         )}
       </div>
+
+      {/* Empty State */}
+      {!loading && templates.length === 0 && (
+        <Card>
+          <CardContent className="text-center py-12">
+            <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium mb-2">No templates found</h3>
+            <p className="text-muted-foreground mb-6">
+              {filters.query || Object.values(filters).some(f => Array.isArray(f) ? f.length > 0 : f)
+                ? 'Try adjusting your search or filters'
+                : 'Get started by creating your first template'
+              }
+            </p>
+            <Button onClick={() => setShowCreateDialog(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              Create First Template
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Pagination */}
+      {totalCount > pageSize && (
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-muted-foreground">
+            Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalCount)} of {totalCount} templates
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(prev => prev - 1)}
+            >
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage * pageSize >= totalCount}
+              onClick={() => setCurrentPage(prev => prev + 1)}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
-  )
+  );
 }
 
 // Mock data for demonstration
@@ -549,108 +823,78 @@ function getMockTemplates(): DocumentTemplate[] {
   return [
     {
       id: '1',
-      template_name: 'Last Will and Testament',
-      template_code: 'WILL-001',
+      name: 'Last Will and Testament',
       description: 'Standard last will and testament template for individual clients',
-      category: 'estate_planning',
-      practice_area: 'estate_planning',
       document_type: 'will',
-      is_fillable: true,
-      is_active: true,
-      is_public: true,
+      practice_area: 'estate_planning',
+      jurisdiction: 'California',
+      template_file_path: '/templates/will-template.docx',
+      template_file_name: 'will-template.docx',
+      template_file_size: 45678,
+      template_version: '2.1',
+      field_definitions: [],
+      required_fields: ['testator_name', 'executor_name'],
+      status: 'active',
+      category: 'estate_planning',
+      tags: ['will', 'estate', 'testator'],
       usage_count: 45,
-      last_used_date: '2025-01-10T14:30:00Z',
-      version_number: '2.1',
-      created_by: {
-        first_name: 'John',
-        last_name: 'Smith'
-      },
-      created_at: '2024-06-15T09:00:00Z',
-      permission_level: 'use'
+      last_used_at: new Date('2025-01-10'),
+      is_latest_version: true,
+      is_public: true,
+      allowed_roles: ['attorney', 'paralegal'],
+      created_by: 'John Smith',
+      created_at: new Date('2024-06-15'),
+      updated_at: new Date('2025-01-10')
     },
     {
       id: '2',
-      template_name: 'LLC Operating Agreement',
-      template_code: 'LLC-OA-001',
+      name: 'LLC Operating Agreement',
       description: 'Multi-member LLC operating agreement template',
-      category: 'business_formation',
+      document_type: 'operating_agreement',
       practice_area: 'business_law',
-      document_type: 'agreement',
-      is_fillable: true,
-      is_active: true,
-      is_public: false,
+      jurisdiction: 'Delaware',
+      template_file_path: '/templates/llc-operating-agreement.docx',
+      template_file_name: 'llc-operating-agreement.docx',
+      template_file_size: 67890,
+      template_version: '1.5',
+      field_definitions: [],
+      required_fields: ['company_name', 'members'],
+      status: 'active',
+      category: 'business_formation',
+      tags: ['llc', 'operating agreement', 'business'],
       usage_count: 23,
-      last_used_date: '2025-01-08T16:20:00Z',
-      version_number: '1.5',
-      created_by: {
-        first_name: 'Sarah',
-        last_name: 'Johnson'
-      },
-      created_at: '2024-08-20T11:15:00Z',
-      permission_level: 'edit'
+      last_used_at: new Date('2025-01-08'),
+      is_latest_version: true,
+      is_public: false,
+      allowed_roles: ['attorney'],
+      created_by: 'Sarah Johnson',
+      created_at: new Date('2024-08-20'),
+      updated_at: new Date('2025-01-08')
     },
     {
       id: '3',
-      template_name: 'Client Engagement Letter',
-      template_code: 'ENG-LTR-001',
+      name: 'Client Engagement Letter',
       description: 'Standard client engagement letter for estate planning matters',
-      category: 'letters',
+      document_type: 'correspondence',
       practice_area: 'estate_planning',
-      document_type: 'letter',
-      is_fillable: true,
-      is_active: true,
-      is_public: true,
+      jurisdiction: 'California',
+      template_file_path: '/templates/engagement-letter.docx',
+      template_file_name: 'engagement-letter.docx',
+      template_file_size: 23456,
+      template_version: '3.0',
+      field_definitions: [],
+      required_fields: ['client_name', 'attorney_name'],
+      status: 'active',
+      category: 'letters',
+      tags: ['engagement', 'client', 'letter'],
       usage_count: 67,
-      last_used_date: '2025-01-12T10:45:00Z',
-      version_number: '3.0',
-      created_by: {
-        first_name: 'Michael',
-        last_name: 'Davis'
-      },
-      created_at: '2024-03-10T08:30:00Z',
-      permission_level: 'use'
-    },
-    {
-      id: '4',
-      template_name: 'Purchase and Sale Agreement - Real Estate',
-      template_code: 'RE-PSA-001',
-      description: 'Residential real estate purchase and sale agreement',
-      category: 'contracts',
-      practice_area: 'real_estate',
-      document_type: 'contract',
-      is_fillable: true,
-      is_active: true,
-      is_public: false,
-      usage_count: 34,
-      last_used_date: '2025-01-05T13:20:00Z',
-      version_number: '2.3',
-      created_by: {
-        first_name: 'Lisa',
-        last_name: 'Wilson'
-      },
-      created_at: '2024-05-25T15:45:00Z',
-      permission_level: 'admin'
-    },
-    {
-      id: '5',
-      template_name: 'Motion for Summary Judgment',
-      template_code: 'LIT-MSJ-001',
-      description: 'Standard motion for summary judgment template',
-      category: 'litigation',
-      practice_area: 'litigation',
-      document_type: 'pleading',
-      is_fillable: true,
-      is_active: true,
+      last_used_at: new Date('2025-01-12'),
+      is_latest_version: true,
       is_public: true,
-      usage_count: 12,
-      last_used_date: '2024-12-20T09:15:00Z',
-      version_number: '1.2',
-      created_by: {
-        first_name: 'Robert',
-        last_name: 'Brown'
-      },
-      created_at: '2024-09-12T12:00:00Z',
-      permission_level: 'use'
+      allowed_roles: ['attorney', 'paralegal'],
+      created_by: 'Michael Davis',
+      created_at: new Date('2024-03-10'),
+      updated_at: new Date('2025-01-12')
     }
-  ]
+  ];
 }

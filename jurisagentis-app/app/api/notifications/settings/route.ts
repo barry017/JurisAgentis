@@ -236,7 +236,7 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    const dbUpdates: any = {
+    const dbUpdates: Record<string, unknown> = {
       updated_at: new Date().toISOString()
     }
 
@@ -292,7 +292,7 @@ export async function PUT(request: NextRequest) {
 }
 
 // Transform database format to API format
-function transformDbToApi(dbSettings: any): NotificationSettings {
+function transformDbToApi(dbSettings: Record<string, unknown>): NotificationSettings {
   return {
     id: dbSettings.id,
     userId: dbSettings.user_id,

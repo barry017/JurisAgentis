@@ -3,7 +3,7 @@
  */
 
 import { NextRequest } from 'next/server'
-import { supabaseServer, supabaseAdmin } from '@/lib/supabase'
+import { /* supabaseServer, */ supabaseAdmin } from '@/lib/supabase'
 import { 
   createSuccessResponse, 
   createErrorResponse, 

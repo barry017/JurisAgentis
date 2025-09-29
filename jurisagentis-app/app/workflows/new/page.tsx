@@ -7,7 +7,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { 
-  CogIcon, 
+  Cog6ToothIcon, 
   ArrowLeftIcon,
   PlusIcon,
   TrashIcon
@@ -17,7 +17,7 @@ interface WorkflowStep {
   name: string
   type: string
   description: string
-  config: Record<string, any>
+  config: Record<string, unknown>
 }
 
 export default function NewWorkflowPage() {
@@ -94,7 +94,7 @@ export default function NewWorkflowPage() {
     }
   }
 
-  const updateStep = (index: number, field: string, value: any) => {
+  const updateStep = (index: number, field: string, value: unknown) => {
     const updatedSteps = [...steps]
     updatedSteps[index] = { ...updatedSteps[index], [field]: value }
     setSteps(updatedSteps)
@@ -114,7 +114,7 @@ export default function NewWorkflowPage() {
             </button>
             <div>
               <h1 className="text-2xl font-bold text-gray-900 flex items-center">
-                <CogIcon className="h-8 w-8 mr-3 text-blue-600" />
+                <Cog6ToothIcon className="h-8 w-8 mr-3 text-blue-600" />
                 Create New Workflow Template
               </h1>
               <p className="text-gray-600 mt-1">

@@ -7,14 +7,15 @@ import { createClient } from '@/lib/supabase/server'
 import { createDatabaseResponse } from '@/lib/utils/api-helpers'
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
 // GET /api/calendar/events/[id] - Get specific calendar event
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
+    const { id } = await params
     const supabase = createClient()
     
     // Auth check
@@ -45,7 +46,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
           clients:client_id(first_name, last_name, business_name)
         )
       `)
-      .eq('id', params.id)
+      .eq('id', id)
       .is('deleted_at', null)
       .single()
 
@@ -79,6 +80,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 // PUT /api/calendar/events/[id] - Update calendar event
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
+    const { id } = await params
     const supabase = createClient()
     
     // Auth check
@@ -110,7 +112,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const { data: existingEvent, error: fetchError } = await supabase
       .from('calendar_events')
       .select('id, organizer_id, assigned_attorney, created_by')
-      .eq('id', params.id)
+      .eq('id', id)
       .is('deleted_at', null)
       .single()
 
@@ -149,7 +151,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const { data: updatedEvent, error } = await supabase
       .from('calendar_events')
       .update(updateData)
-      .eq('id', params.id)
+      .eq('id', id)
       .select(`
         id,
         title,
@@ -186,6 +188,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 // DELETE /api/calendar/events/[id] - Soft delete calendar event
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
+    const { id } = await params
     const supabase = createClient()
     
     // Auth check
@@ -215,7 +218,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     const { data: existingEvent, error: fetchError } = await supabase
       .from('calendar_events')
       .select('id, title')
-      .eq('id', params.id)
+      .eq('id', id)
       .is('deleted_at', null)
       .single()
 
@@ -235,7 +238,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         updated_by: user.id,
         updated_at: new Date().toISOString()
       })
-      .eq('id', params.id)
+      .eq('id', id)
 
     if (error) {
       console.error('Database error deleting event:', error)
@@ -247,7 +250,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(
       createDatabaseResponse(
-        { id: params.id, title: existingEvent.title }, 
+        { id: id, title: existingEvent.title }, 
         'Calendar event deleted successfully', 
         'SUCCESS'
       )

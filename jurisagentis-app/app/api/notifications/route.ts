@@ -31,7 +31,7 @@ export interface Notification {
     workflowId?: string
     userId?: string
     userName?: string
-    [key: string]: any
+    [key: string]: unknown
   }
   expiresAt?: string
   relatedNotifications?: string[]
@@ -335,7 +335,7 @@ export async function DELETE(request: NextRequest) {
 }
 
 // Transform database format to API format
-function transformDbToApi(dbNotification: any): Notification {
+function transformDbToApi(dbNotification: Record<string, unknown>): Notification {
   return {
     id: dbNotification.id,
     type: dbNotification.type,

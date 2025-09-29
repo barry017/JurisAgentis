@@ -34,13 +34,13 @@ CREATE TABLE IF NOT EXISTS pending_registrations (
     -- 'pending_verification', 'pending_approval', 'approved', 'rejected', 'expired'
     
     -- Admin Review
-    reviewed_by UUID REFERENCES user_profiles(uid),
+    reviewed_by UUID REFERENCES user_profiles(id),
     reviewed_at TIMESTAMP WITH TIME ZONE,
     admin_notes TEXT,
     rejection_reason TEXT,
     
     -- Final User Account
-    approved_user_id UUID REFERENCES user_profiles(uid),
+    approved_user_id UUID REFERENCES user_profiles(id),
     approved_role VARCHAR(50),
     
     -- Timestamps
@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS email_verification_tokens (
     -- Associated Data
     email VARCHAR(320) NOT NULL,
     pending_registration_id UUID REFERENCES pending_registrations(id) ON DELETE CASCADE,
-    user_id UUID REFERENCES user_profiles(uid) ON DELETE CASCADE,
+    user_id UUID REFERENCES user_profiles(id) ON DELETE CASCADE,
     
     -- Token Status
     used BOOLEAN DEFAULT false,
@@ -86,10 +86,10 @@ CREATE TABLE IF NOT EXISTS admin_notifications (
     
     -- Associated Records
     pending_registration_id UUID REFERENCES pending_registrations(id) ON DELETE CASCADE,
-    user_id UUID REFERENCES user_profiles(uid) ON DELETE SET NULL,
+    user_id UUID REFERENCES user_profiles(id) ON DELETE SET NULL,
     
     -- Recipient
-    recipient_id UUID REFERENCES user_profiles(uid) ON DELETE CASCADE,
+    recipient_id UUID REFERENCES user_profiles(id) ON DELETE CASCADE,
     
     -- Status
     read BOOLEAN DEFAULT false,
@@ -144,11 +144,7 @@ CREATE POLICY "Admins can manage pending registrations" ON pending_registrations
   FOR ALL 
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role = 'admin'
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) = 'admin'
   );
 
 -- RLS Policies for email_verification_tokens
@@ -179,11 +175,7 @@ CREATE POLICY "Admins can view their notifications" ON admin_notifications
   TO authenticated
   USING (
     recipient_id = (auth.jwt() ->> 'sub')::UUID AND
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role = 'admin'
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) = 'admin'
   );
 
 -- System can create notifications
@@ -191,11 +183,7 @@ CREATE POLICY "System can create admin notifications" ON admin_notifications
   FOR INSERT 
   TO authenticated
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = recipient_id 
-      AND role = 'admin'
-    )
+    get_user_role(recipient_id) = 'admin'
   );
 
 -- Admins can update their own notifications
@@ -204,11 +192,7 @@ CREATE POLICY "Admins can update their notifications" ON admin_notifications
   TO authenticated
   USING (
     recipient_id = (auth.jwt() ->> 'sub')::UUID AND
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role = 'admin'
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) = 'admin'
   );
 
 -- Function to clean up expired registrations
@@ -256,9 +240,9 @@ BEGIN
            NEW.first_name, NEW.last_name, NEW.email, NEW.requested_role, NEW.job_title),
     'normal',
     NEW.id,
-    up.uid
+    up.id
   FROM user_profiles up
-  WHERE up.role = 'admin' 
+  WHERE get_user_role(up.id) = 'admin'
     AND up.status = 'active';
   
   RETURN NEW;

@@ -6,12 +6,11 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { 
   ChartBarIcon,
   PlusIcon,
-  CalendarIcon,
   CurrencyDollarIcon,
   DocumentTextIcon,
   UserGroupIcon,
@@ -20,7 +19,6 @@ import {
   ShareIcon,
   EyeIcon,
   PencilIcon,
-  TrashIcon,
   FunnelIcon,
   ChartPieIcon,
   TableCellsIcon,
@@ -28,8 +26,7 @@ import {
   DocumentChartBarIcon,
   AdjustmentsHorizontalIcon,
   SparklesIcon,
-  StarIcon,
-  BookmarkIcon
+  StarIcon
 } from '@heroicons/react/24/outline'
 
 interface Report {
@@ -44,9 +41,9 @@ interface Report {
   isFavorite: boolean
   config: {
     dataSource: string
-    filters: any[]
+    filters: Record<string, unknown>[]
     groupBy?: string[]
-    aggregations?: any[]
+    aggregations?: Record<string, unknown>[]
     dateRange?: string
     sortBy?: string
     sortOrder?: 'asc' | 'desc'
@@ -73,7 +70,7 @@ interface ReportTemplate {
   category: string
   previewImage: string
   isPopular: boolean
-  config: any
+  config: Record<string, unknown>
 }
 
 // Mock reports
@@ -238,7 +235,7 @@ const mockTemplates: ReportTemplate[] = [
 export default function ReportsPage() {
   const router = useRouter()
   const [reports, setReports] = useState<Report[]>(mockReports)
-  const [templates, setTemplates] = useState<ReportTemplate[]>(mockTemplates)
+  const [templates] = useState<ReportTemplate[]>(mockTemplates)
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [selectedType, setSelectedType] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')

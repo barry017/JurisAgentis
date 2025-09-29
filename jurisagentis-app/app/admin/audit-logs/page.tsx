@@ -12,8 +12,7 @@ import {
   UserIcon,
   ComputerDesktopIcon,
   EyeIcon,
-  XMarkIcon,
-  CalendarIcon
+  XMarkIcon
 } from '@heroicons/react/24/outline'
 
 interface AuditLog {
@@ -29,7 +28,7 @@ interface AuditLog {
   user_id: string
   ip_address: string
   user_agent: string
-  details: any
+  details: Record<string, unknown>
   resource: string
   resource_id: string
   success: boolean
@@ -52,7 +51,7 @@ interface SecurityAlert {
   severity: string
   user: { email: string; name: string } | null
   ip_address: string
-  details: any
+  details: Record<string, unknown>
   created_at: string
   risk_score: number
 }
@@ -89,7 +88,7 @@ export default function AuditLogsPage() {
 
   useEffect(() => {
     loadData()
-  }, [activeTab, filters, currentPage])
+  }, [activeTab, filters, currentPage]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadData = async () => {
     setLoading(true)
@@ -115,7 +114,7 @@ export default function AuditLogsPage() {
     const queryParams = new URLSearchParams({
       limit: pageSize.toString(),
       offset: ((currentPage - 1) * pageSize).toString(),
-      ...Object.fromEntries(Object.entries(filters).filter(([_, value]) => value))
+      ...Object.fromEntries(Object.entries(filters).filter(([, value]) => value))
     })
 
     const response = await fetch(`/api/admin/audit-logs?${queryParams}`)
@@ -130,7 +129,7 @@ export default function AuditLogsPage() {
   }
 
   const loadSummary = async () => {
-    const body: any = { action: 'summary' }
+    const body: { action: string; start_date?: string; end_date?: string } = { action: 'summary' }
     if (filters.start_date) body.start_date = filters.start_date
     if (filters.end_date) body.end_date = filters.end_date
 
@@ -197,7 +196,7 @@ export default function AuditLogsPage() {
       } else {
         throw new Error('Export failed')
       }
-    } catch (err) {
+    } catch {
       setError('Failed to export audit logs')
     }
   }
@@ -262,7 +261,7 @@ export default function AuditLogsPage() {
               
               <div className="relative">
                 <select
-                  onChange={(e) => e.target.value && handleExport(e.target.value as any)}
+                  onChange={(e) => e.target.value && handleExport(e.target.value as 'csv' | 'json' | 'pdf')}
                   value=""
                   className="appearance-none bg-white border border-gray-300 rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                 >
@@ -411,7 +410,7 @@ export default function AuditLogsPage() {
               ].map((tab) => (
                 <button
                   key={tab.key}
-                  onClick={() => setActiveTab(tab.key as any)}
+                  onClick={() => setActiveTab(tab.key as 'logs' | 'summary' | 'alerts')}
                   className={`flex items-center py-2 px-1 border-b-2 font-medium text-sm ${
                     activeTab === tab.key
                       ? 'border-blue-500 text-blue-600'

@@ -14,11 +14,11 @@ import {
   ArrowDownTrayIcon,
   EyeIcon,
   MagnifyingGlassIcon,
-  FunnelIcon,
+  // FunnelIcon,
   CloudArrowUpIcon,
   ShieldCheckIcon,
-  CalendarIcon,
-  UserIcon,
+  // CalendarIcon,
+  // UserIcon,
   CheckCircleIcon,
   ClockIcon,
   ExclamationTriangleIcon,
@@ -163,13 +163,13 @@ const folders = [
 
 export default function ClientDocumentsPage() {
   const router = useRouter()
-  const [documents, setDocuments] = useState<Document[]>(mockDocuments)
+  const [documents, _setDocuments] = useState<Document[]>(mockDocuments)
   const [filteredDocuments, setFilteredDocuments] = useState<Document[]>(mockDocuments)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [selectedStatus, setSelectedStatus] = useState('all')
   const [viewMode, setViewMode] = useState<'list' | 'folders'>('folders')
-  const [loading, setLoading] = useState(false)
+  const [_loading, _setLoading] = useState(false)
 
   // Filter documents based on search and filters
   useEffect(() => {

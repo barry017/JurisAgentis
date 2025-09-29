@@ -8,21 +8,22 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { useRouter } from 'next/navigation'
 import { 
-  UserIcon,
-  PencilSquareIcon,
-  PhoneIcon,
-  EnvelopeIcon,
-  MapPinIcon,
-  BuildingOfficeIcon,
-  CalendarIcon,
-  DocumentTextIcon,
-  ArrowLeftIcon,
-  ExclamationTriangleIcon,
-  TrashIcon,
-  ClockIcon
-} from '@heroicons/react/24/outline'
-import ClientCommunicationHistory from '@/app/components/ClientCommunicationHistory'
-import ClientDocuments from '@/app/components/ClientDocuments'
+  User,
+  Edit,
+  Phone,
+  Mail,
+  MapPin,
+  Building,
+  Calendar,
+  FileText,
+  ArrowLeft,
+  AlertTriangle,
+  Trash2,
+  Clock
+} from 'lucide-react'
+// TODO: Re-implement ClientCommunicationHistory and ClientDocuments components for Phase 5
+// import ClientCommunicationHistory from '@/app/components/ClientCommunicationHistory'
+// import ClientDocuments from '@/app/components/ClientDocuments'
 
 interface Client {
   id: string
@@ -104,11 +105,11 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
         const data = await response.json()
 
         if (response.ok) {
-          setClient(data.client)
+          setClient(data.data?.client || data.client)
         } else {
           setError(data.error?.message || 'Failed to load client')
         }
-      } catch (error) {
+      } catch (_error) {
         setError('Network error occurred')
       } finally {
         setLoading(false)
@@ -176,7 +177,7 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
           const data = await response.json()
           alert(`Failed to delete client: ${data.error?.message || 'Unknown error'}`)
         }
-      } catch (error) {
+      } catch (_error) {
         alert('Network error occurred while deleting client')
       }
     }
@@ -198,7 +199,7 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <ExclamationTriangleIcon className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Client</h2>
           <p className="text-gray-600 mb-4">{error}</p>
           <button
@@ -216,7 +217,7 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <UserIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <User className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Client Not Found</h2>
           <p className="text-gray-600 mb-4">The requested client could not be found.</p>
           <button
@@ -241,14 +242,14 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
                 onClick={() => router.push('/clients')}
                 className="p-2 text-gray-400 hover:text-gray-600 transition-colors mr-3"
               >
-                <ArrowLeftIcon className="h-5 w-5" />
+                <ArrowLeft className="h-5 w-5" />
               </button>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 flex items-center">
                   {client.client_type === 'business' ? (
-                    <BuildingOfficeIcon className="h-8 w-8 mr-3 text-blue-600" />
+                    <Building className="h-8 w-8 mr-3 text-blue-600" />
                   ) : (
-                    <UserIcon className="h-8 w-8 mr-3 text-blue-600" />
+                    <User className="h-8 w-8 mr-3 text-blue-600" />
                   )}
                   {getClientDisplayName(client)}
                 </h1>
@@ -272,7 +273,7 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
                   onClick={() => router.push(`/clients/${clientId}/edit`)}
                   className="btn-secondary flex items-center"
                 >
-                  <PencilSquareIcon className="h-4 w-4 mr-2" />
+                  <Edit className="h-4 w-4 mr-2" />
                   Edit Client
                 </button>
               )}
@@ -282,7 +283,7 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
                   onClick={handleDeleteClient}
                   className="btn-danger flex items-center"
                 >
-                  <TrashIcon className="h-4 w-4 mr-2" />
+                  <Trash2 className="h-4 w-4 mr-2" />
                   Delete
                 </button>
               )}
@@ -299,7 +300,7 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
             {/* Personal Information */}
             <div className="card">
               <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <UserIcon className="h-5 w-5 mr-2 text-blue-600" />
+                <User className="h-5 w-5 mr-2 text-blue-600" />
                 Personal Information
               </h3>
               
@@ -333,14 +334,14 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
             {/* Contact Information */}
             <div className="card">
               <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <PhoneIcon className="h-5 w-5 mr-2 text-green-600" />
+                <Phone className="h-5 w-5 mr-2 text-green-600" />
                 Contact Information
               </h3>
               
               <div className="space-y-4">
                 {client.email && (
                   <div className="flex items-center">
-                    <EnvelopeIcon className="h-5 w-5 text-gray-400 mr-3" />
+                    <Mail className="h-5 w-5 text-gray-400 mr-3" />
                     <div>
                       <p className="text-gray-900">{client.email}</p>
                       <p className="text-sm text-gray-500">Email</p>
@@ -350,7 +351,7 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
 
                 {client.phone_primary && (
                   <div className="flex items-center">
-                    <PhoneIcon className="h-5 w-5 text-gray-400 mr-3" />
+                    <Phone className="h-5 w-5 text-gray-400 mr-3" />
                     <div>
                       <p className="text-gray-900">{client.phone_primary}</p>
                       <p className="text-sm text-gray-500">Primary Phone</p>
@@ -360,7 +361,7 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
 
                 {client.phone_secondary && (
                   <div className="flex items-center">
-                    <PhoneIcon className="h-5 w-5 text-gray-400 mr-3" />
+                    <Phone className="h-5 w-5 text-gray-400 mr-3" />
                     <div>
                       <p className="text-gray-900">{client.phone_secondary}</p>
                       <p className="text-sm text-gray-500">Secondary Phone</p>
@@ -370,7 +371,7 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
 
                 {(client.address_line1 || client.city || client.state) && (
                   <div className="flex items-start">
-                    <MapPinIcon className="h-5 w-5 text-gray-400 mr-3 mt-1" />
+                    <MapPin className="h-5 w-5 text-gray-400 mr-3 mt-1" />
                     <div>
                       {client.address_line1 && <p className="text-gray-900">{client.address_line1}</p>}
                       {client.address_line2 && <p className="text-gray-900">{client.address_line2}</p>}
@@ -390,7 +391,7 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
             {(client.business_name || client.business_type || client.business_tax_id) && (
               <div className="card">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                  <BuildingOfficeIcon className="h-5 w-5 mr-2 text-orange-600" />
+                  <Building className="h-5 w-5 mr-2 text-orange-600" />
                   Business Information
                 </h3>
                 
@@ -423,7 +424,7 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
             {client.notes && (
               <div className="card">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                  <DocumentTextIcon className="h-5 w-5 mr-2 text-purple-600" />
+                  <FileText className="h-5 w-5 mr-2 text-purple-600" />
                   Notes
                 </h3>
                 <div className="bg-gray-50 rounded-lg p-4">
@@ -432,20 +433,16 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
               </div>
             )}
 
-            {/* Communication History */}
+            {/* Communication History - TODO: Re-implement for Phase 5 */}
             <div className="card">
-              <ClientCommunicationHistory 
-                clientId={client.id}
-                clientName={getClientDisplayName(client)}
-              />
+              <h3 className="text-lg font-semibold mb-4">Communication History</h3>
+              <p className="text-gray-500">Communication history will be available in Phase 5.</p>
             </div>
 
-            {/* Client Documents */}
+            {/* Client Documents - TODO: Re-implement for Phase 5 */}
             <div className="card">
-              <ClientDocuments 
-                clientId={client.id}
-                clientName={getClientDisplayName(client)}
-              />
+              <h3 className="text-lg font-semibold mb-4">Client Documents</h3>
+              <p className="text-gray-500">Document management will be available in Phase 5.</p>
             </div>
           </div>
 
@@ -456,15 +453,15 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
               <div className="space-y-3">
                 <button className="w-full btn-secondary text-left flex items-center">
-                  <CalendarIcon className="h-4 w-4 mr-2" />
+                  <Calendar className="h-4 w-4 mr-2" />
                   Schedule Appointment
                 </button>
                 <button className="w-full btn-secondary text-left flex items-center">
-                  <EnvelopeIcon className="h-4 w-4 mr-2" />
+                  <Mail className="h-4 w-4 mr-2" />
                   Send Message
                 </button>
                 <button className="w-full btn-secondary text-left flex items-center">
-                  <DocumentTextIcon className="h-4 w-4 mr-2" />
+                  <FileText className="h-4 w-4 mr-2" />
                   View Documents
                 </button>
               </div>
@@ -519,7 +516,7 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Created</label>
                   <div className="flex items-center text-sm text-gray-600">
-                    <ClockIcon className="h-4 w-4 mr-1" />
+                    <Clock className="h-4 w-4 mr-1" />
                     {new Date(client.created_at).toLocaleDateString()}
                   </div>
                 </div>
@@ -527,7 +524,7 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Last Updated</label>
                   <div className="flex items-center text-sm text-gray-600">
-                    <ClockIcon className="h-4 w-4 mr-1" />
+                    <Clock className="h-4 w-4 mr-1" />
                     {new Date(client.updated_at).toLocaleDateString()}
                   </div>
                 </div>

@@ -23,6 +23,9 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50')
     const offset = parseInt(searchParams.get('offset') || '0')
     
+    // Log filter parameters for development/debugging
+    console.log('Calendar events filter params:', { matterId, clientId, assignedAttorney })
+    
     // Use mock data for development
     const mockEvents = getMockCalendarEvents()
     const filteredMockEvents = mockEvents.filter(event => {

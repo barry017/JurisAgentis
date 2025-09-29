@@ -4,7 +4,7 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { 
   FolderOpenIcon,
@@ -15,17 +15,12 @@ import {
   CheckCircleIcon,
   XCircleIcon,
   ExclamationTriangleIcon,
-  UserIcon,
   CurrencyDollarIcon,
   CalendarIcon,
   PlusIcon,
   ChevronRightIcon,
-  ChevronDownIcon,
   EyeIcon,
   ArrowDownTrayIcon,
-  ShareIcon,
-  TrashIcon,
-  BanknotesIcon,
   PhoneIcon,
   EnvelopeIcon
 } from '@heroicons/react/24/outline'
@@ -171,11 +166,26 @@ export default function MatterDetailPage() {
   const [newStatus, setNewStatus] = useState<Matter['status']>('active')
   const [statusNotes, setStatusNotes] = useState('')
 
-  useEffect(() => {
-    loadMatterData()
+  const loadDocuments = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/documents?matter_id=${matterId}`, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success && data.data.documents) {
+          setDocuments(data.data.documents)
+        }
+      }
+    } catch (error) {
+      console.error('Error loading documents:', error)
+    }
   }, [matterId])
 
-  const loadMatterData = async () => {
+  const loadMatterData = useCallback(async () => {
     try {
       setLoading(true)
       
@@ -347,7 +357,11 @@ export default function MatterDetailPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [loadDocuments, matterId])
+
+  useEffect(() => {
+    loadMatterData()
+  }, [matterId, loadMatterData])
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -394,26 +408,6 @@ export default function MatterDetailPage() {
   const getProgressPercentage = (tasksCompleted: number, tasksTotal: number) => {
     if (tasksTotal === 0) return 0
     return Math.round((tasksCompleted / tasksTotal) * 100)
-  }
-
-  const loadDocuments = async () => {
-    try {
-      const response = await fetch(`/api/documents?matter_id=${matterId}`, {
-        headers: {
-          'Authorization': `Bearer mock-token-development`,
-          'Content-Type': 'application/json'
-        }
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        if (data.success && data.data.documents) {
-          setDocuments(data.data.documents)
-        }
-      }
-    } catch (error) {
-      console.error('Error loading documents:', error)
-    }
   }
 
   const formatFileSize = (bytes: number) => {
@@ -618,7 +612,7 @@ export default function MatterDetailPage() {
               ].map((tab) => (
                 <button
                   key={tab.key}
-                  onClick={() => setActiveTab(tab.key as any)}
+                  onClick={() => setActiveTab(tab.key as 'details' | 'documents' | 'tasks' | 'billing' | 'timeline')}
                   className={`${
                     activeTab === tab.key
                       ? 'border-blue-500 text-blue-600'

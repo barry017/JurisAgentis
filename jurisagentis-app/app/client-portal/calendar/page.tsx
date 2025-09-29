@@ -6,7 +6,7 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { 
   CalendarIcon,
@@ -22,7 +22,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   PlusIcon,
-  EyeIcon
+  // EyeIcon
 } from '@heroicons/react/24/outline'
 
 interface CalendarEvent {
@@ -160,11 +160,11 @@ const mockEvents: CalendarEvent[] = [
 
 export default function ClientCalendarPage() {
   const router = useRouter()
-  const [events, setEvents] = useState<CalendarEvent[]>(mockEvents)
+  const [events, _setEvents] = useState<CalendarEvent[]>(mockEvents)
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [viewMode, setViewMode] = useState<'month' | 'week' | 'agenda'>('month')
-  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
-  const [showEventModal, setShowEventModal] = useState(false)
+  const [_selectedEvent, _setSelectedEvent] = useState<CalendarEvent | null>(null)
+  const [_showEventModal, _setShowEventModal] = useState(false)
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -311,7 +311,7 @@ export default function ClientCalendarPage() {
               <div className="bg-white rounded-lg shadow p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                   <ClockIcon className="h-5 w-5 mr-2 text-blue-600" />
-                  Today's Schedule
+                  Today&apos;s Schedule
                 </h2>
                 <div className="space-y-3">
                   {getTodaysEvents().map(event => {
@@ -355,7 +355,7 @@ export default function ClientCalendarPage() {
               <div className="space-y-4">
                 {getUpcomingEvents().map(event => {
                   const EventIcon = getEventIcon(event.type, event.locationType)
-                  const eventDate = new Date(event.date + 'T' + event.startTime)
+                  const _eventDate = new Date(event.date + 'T' + event.startTime)
                   const isToday = event.date === new Date().toISOString().split('T')[0]
                   const isTomorrow = event.date === new Date(Date.now() + 86400000).toISOString().split('T')[0]
                   

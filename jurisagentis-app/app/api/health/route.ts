@@ -6,7 +6,6 @@ import { NextRequest } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { 
   createSuccessResponse, 
-  createErrorResponse,
   addCORSHeaders
 } from '@/lib/api/response'
 
@@ -34,7 +33,7 @@ interface HealthStatus {
   }>
 }
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   const startTime = Date.now()
   const checks: HealthStatus['checks'] = []
   let overallStatus: HealthStatus['status'] = 'healthy'

@@ -88,7 +88,7 @@ function ResetPasswordForm() {
       } else {
         setError(result.error?.message || 'Failed to reset password')
       }
-    } catch (err) {
+    } catch (_err) {
       setError('An error occurred. Please try again.')
     } finally {
       setLoading(false)

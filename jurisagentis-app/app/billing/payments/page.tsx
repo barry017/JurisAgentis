@@ -17,7 +17,7 @@ import {
   ClockIcon,
   ExclamationTriangleIcon,
   CurrencyDollarIcon,
-  CalendarIcon,
+  // CalendarIcon,
   DocumentTextIcon,
   ChevronUpDownIcon,
   EyeIcon,
@@ -61,7 +61,7 @@ interface OutstandingInvoice {
 interface QuickPaymentModalProps {
   invoice: OutstandingInvoice | null
   onClose: () => void
-  onPaymentRecorded: (payment: any) => void
+  onPaymentRecorded: (payment: { amount: number; payment_method: string; payment_date: string; reference_number?: string; notes?: string }) => void
 }
 
 function QuickPaymentModal({ invoice, onClose, onPaymentRecorded }: QuickPaymentModalProps) {
@@ -404,7 +404,7 @@ export default function PaymentsPage() {
     setShowQuickPayment(true)
   }
 
-  const handlePaymentRecorded = (paymentData: any) => {
+  const handlePaymentRecorded = (paymentData: { amount: number; payment_method: string; payment_date: string; reference_number?: string; notes?: string }) => {
     const newPayment: Payment = {
       id: `payment-${Date.now()}`,
       ...paymentData,

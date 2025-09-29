@@ -3,7 +3,7 @@
  */
 
 import { NextRequest } from 'next/server'
-import { supabaseServer, supabaseAdmin } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase'
 import { 
   createSuccessResponse, 
   createErrorResponse, 
@@ -30,6 +30,31 @@ interface AuditLogExport {
   query: AuditLogQuery
 }
 
+interface UserActivityStats {
+  user_id: string
+  email: string
+  name: string
+  activity_count: number
+}
+
+interface SecurityAlert {
+  severity: 'low' | 'medium' | 'high' | 'critical'
+  event_type: string
+  success?: boolean
+  ip_address?: string
+  user_profiles?: {
+    email: string
+  }
+}
+
+interface SuspiciousPattern {
+  type: string
+  description: string
+  severity: 'low' | 'medium' | 'high' | 'critical'
+  ip_address?: string
+  count?: number
+}
+
 // GET /api/admin/audit-logs - Retrieve audit logs with filtering
 export async function GET(request: NextRequest) {
   try {
@@ -40,8 +65,8 @@ export async function GET(request: NextRequest) {
       start_date: url.searchParams.get('start_date') || undefined,
       end_date: url.searchParams.get('end_date') || undefined,
       ip_address: url.searchParams.get('ip_address') || undefined,
-      severity: url.searchParams.get('severity') as any || undefined,
-      category: url.searchParams.get('category') as any || undefined,
+      severity: url.searchParams.get('severity') as 'low' | 'medium' | 'high' | 'critical' | null || undefined,
+      category: url.searchParams.get('category') as 'authentication' | 'data_access' | 'user_management' | 'system' | 'security' | null || undefined,
       limit: parseInt(url.searchParams.get('limit') || '50'),
       offset: parseInt(url.searchParams.get('offset') || '0')
     }
@@ -356,18 +381,18 @@ async function handleAuditLogSummary(request: NextRequest) {
       .not('user_id', 'is', null)
 
     // Process the data
-    const eventTypeStats = eventTypes?.reduce((acc: any, log) => {
+    const eventTypeStats = eventTypes?.reduce((acc: Record<string, number>, log) => {
       acc[log.event_type] = (acc[log.event_type] || 0) + 1
       return acc
-    }, {}) || {}
+    }, {} as Record<string, number>) || {}
 
-    const severityStats = severityBreakdown?.reduce((acc: any, log) => {
+    const severityStats = severityBreakdown?.reduce((acc: Record<string, number>, log) => {
       const severity = log.severity || 'low'
       acc[severity] = (acc[severity] || 0) + 1
       return acc
-    }, {}) || {}
+    }, {} as Record<string, number>) || {}
 
-    const userStats = userActivity?.reduce((acc: any, log) => {
+    const userStats = userActivity?.reduce((acc: Record<string, UserActivityStats>, log) => {
       if (log.user_id && log.user_profiles) {
         const key = log.user_id
         if (!acc[key]) {
@@ -381,10 +406,10 @@ async function handleAuditLogSummary(request: NextRequest) {
         acc[key].activity_count += 1
       }
       return acc
-    }, {}) || {}
+    }, {} as Record<string, UserActivityStats>) || {}
 
     const topUsers = Object.values(userStats)
-      .sort((a: any, b: any) => b.activity_count - a.activity_count)
+      .sort((a: UserActivityStats, b: UserActivityStats) => b.activity_count - a.activity_count)
       .slice(0, 10)
 
     return addCORSHeaders(createSuccessResponse({
@@ -490,7 +515,7 @@ async function handleSecurityAlerts(request: NextRequest) {
 }
 
 // Helper functions
-function generateCSVExport(data: any[]): string {
+function generateCSVExport(data: Record<string, unknown>[]): string {
   if (data.length === 0) return ''
   
   const headers = Object.keys(data[0]).join(',')
@@ -505,7 +530,7 @@ function generateCSVExport(data: any[]): string {
   return [headers, ...rows].join('\n')
 }
 
-function calculateRiskScore(alert: any): number {
+function calculateRiskScore(alert: SecurityAlert): number {
   let score = 1
 
   // Base severity score
@@ -530,16 +555,18 @@ function calculateRiskScore(alert: any): number {
   return Math.min(score, 10) // Cap at 10
 }
 
-async function analyzeSuspiciousActivity(alerts: any[]): Promise<any[]> {
-  const patterns = []
+async function analyzeSuspiciousActivity(alerts: SecurityAlert[]): Promise<SuspiciousPattern[]> {
+  const patterns: SuspiciousPattern[] = []
 
   // Multiple failed logins from same IP
   const ipFailures = alerts
     .filter(a => a.event_type === 'login_failed')
-    .reduce((acc: any, alert) => {
-      acc[alert.ip_address] = (acc[alert.ip_address] || 0) + 1
+    .reduce((acc: Record<string, number>, alert) => {
+      if (alert.ip_address) {
+        acc[alert.ip_address] = (acc[alert.ip_address] || 0) + 1
+      }
       return acc
-    }, {})
+    }, {} as Record<string, number>)
 
   Object.entries(ipFailures).forEach(([ip, count]) => {
     if ((count as number) >= 5) {
@@ -554,13 +581,13 @@ async function analyzeSuspiciousActivity(alerts: any[]): Promise<any[]> {
   })
 
   // Multiple users from same IP
-  const ipUsers = alerts.reduce((acc: any, alert) => {
-    if (alert.user_profiles?.email) {
+  const ipUsers = alerts.reduce((acc: Record<string, Set<string>>, alert) => {
+    if (alert.user_profiles?.email && alert.ip_address) {
       if (!acc[alert.ip_address]) acc[alert.ip_address] = new Set()
       acc[alert.ip_address].add(alert.user_profiles.email)
     }
     return acc
-  }, {})
+  }, {} as Record<string, Set<string>>)
 
   Object.entries(ipUsers).forEach(([ip, users]) => {
     if ((users as Set<string>).size >= 3) {

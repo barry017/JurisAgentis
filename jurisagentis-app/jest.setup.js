@@ -1,4 +1,4 @@
-require('@testing-library/jest-dom')
+import '@testing-library/jest-dom'
 
 // Enable fetch for Node.js 18+ (already available globally)
 // No polyfill needed for Node.js 18+

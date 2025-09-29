@@ -3,7 +3,7 @@
  */
 
 import { NextRequest } from 'next/server'
-import { supabaseServer, supabaseAdmin } from '@/lib/supabase'
+import { /* supabaseServer, */ supabaseAdmin } from '@/lib/supabase'
 import { 
   createSuccessResponse, 
   createErrorResponse, 
@@ -12,7 +12,8 @@ import {
   validateContentType,
   addCORSHeaders
 } from '@/lib/api/response'
-import { authenticate, logAuditEvent, AuthenticationError } from '@/lib/auth/middleware'
+import { authenticate, logAuditEvent, AuthenticationError, AuthenticatedUser } from '@/lib/auth/middleware'
+import { createProtectedRoute } from '@/lib/auth/api-middleware'
 import { ClientInsert, ClientStatus, ClientType } from '@/types/database'
 
 interface ListClientsParams {
@@ -55,22 +56,11 @@ interface CreateClientRequest {
   tags?: string[]
 }
 
-export async function GET(request: NextRequest) {
+// GET /api/clients - List clients with enhanced RBAC
+async function handleGetClients(request: NextRequest, user: AuthenticatedUser) {
   try {
-    // Get authenticated user
-    const user = await authenticate(request)
-    
     // Development mode: Return mock data when database is not available
     const isDevelopment = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test'
-    
-    // Check permissions - only certain roles can list clients
-    if (!['admin', 'associate_attorney', 'paralegal', 'assistant'].includes(user.role)) {
-      return addCORSHeaders(createErrorResponse(
-        'INSUFFICIENT_PRIVILEGES',
-        'Access denied: insufficient privileges to list clients',
-        403
-      ))
-    }
 
     // Parse query parameters
     const url = new URL(request.url)
@@ -175,9 +165,9 @@ export async function GET(request: NextRequest) {
           {
             id: 'client-1',
             first_name: 'John',
-            last_name: 'Smith',
+            last_name: 'Johnson',
             preferred_name: null,
-            email: 'john.smith@example.com',
+            email: 'john.johnson@example.com',
             phone_primary: '(555) 123-4567',
             client_status: 'active',
             client_type: 'individual',
@@ -205,9 +195,9 @@ export async function GET(request: NextRequest) {
           {
             id: 'client-3',
             first_name: 'Robert',
-            last_name: 'Johnson',
+            last_name: 'Williams',
             preferred_name: 'Bob',
-            email: 'bob.johnson@email.com',
+            email: 'bob.williams@email.com',
             phone_primary: '(555) 555-1234',
             client_status: 'prospect',
             client_type: 'individual',
@@ -263,16 +253,23 @@ export async function GET(request: NextRequest) {
       ))
     }
 
-    // Log audit event
+    // Apply role-based filtering (Enhanced RBAC - FR-008 to FR-013)
+    if (clients) {
+      clients = await applyRoleBasedClientFiltering(clients, user)
+    }
+
+    // Log audit event with enhanced details
     await logAuditEvent(
-      'data_access',
+      'client_list_access',
       user.uid,
       request,
       { 
         resource: 'clients',
         action: 'list',
         filters: params,
-        result_count: clients?.length || 0
+        result_count: clients?.length || 0,
+        role: user.role,
+        permissions: user.permissions.clients
       }
     )
 
@@ -306,7 +303,82 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+/**
+ * Apply role-based client filtering according to FR-008 to FR-013
+ * Ensures users only see clients they have permission to access
+ */
+async function applyRoleBasedClientFiltering(clients: Record<string, unknown>[], user: AuthenticatedUser): Promise<Record<string, unknown>[]> {
+  const clientPermission = user.permissions.clients
+  
+  switch (clientPermission) {
+    case 'full':
+      // Admin and associate attorneys see all clients
+      return clients
+      
+    case 'assigned':
+      // Paralegals see only assigned clients
+      // In production, this would filter based on client assignments in database
+      return clients.filter(client => {
+        // Mock logic: paralegals see clients where they're assigned
+        // In real implementation, check client_assignments table
+        return client.assigned_paralegal_id === user.uid || client.assigned_staff?.includes(user.uid)
+      })
+      
+    case 'basic':
+      // Assistants see basic client info only (remove sensitive data)
+      return clients.map(client => ({
+        id: client.id,
+        first_name: client.first_name,
+        last_name: client.last_name,
+        preferred_name: client.preferred_name,
+        business_name: client.business_name,
+        client_status: client.client_status,
+        client_type: client.client_type,
+        practice_areas: client.practice_areas,
+        // Remove financial and sensitive information
+        email: undefined,
+        phone_primary: undefined,
+        address_line1: undefined,
+        billing_rate: undefined,
+        credit_limit: undefined
+      }))
+      
+    case 'own_profile':
+      // Clients see only their own profile
+      return clients.filter(client => client.id === user.uid || client.user_id === user.uid)
+      
+    case 'granted_only':
+      // Client-related parties see only clients they have explicit permission for
+      // In production, this would check client_permissions table
+      return clients.filter(client => {
+        // Mock logic: check if user has been granted access by primary client
+        return client.granted_access?.includes(user.uid)
+      })
+      
+    case 'readonly':
+      // Developer access - read-only view with limited data
+      return clients.map(client => ({
+        id: client.id,
+        first_name: client.first_name,
+        last_name: client.last_name,
+        client_status: client.client_status,
+        client_type: client.client_type,
+        created_at: client.created_at,
+        // Remove all sensitive information
+        email: '[REDACTED]',
+        phone_primary: '[REDACTED]',
+        address_line1: '[REDACTED]'
+      }))
+      
+    case 'none':
+    default:
+      // No access to client list
+      return []
+  }
+}
+
+// POST /api/clients - Create new client with enhanced RBAC
+async function handleCreateClient(request: NextRequest, _user: AuthenticatedUser) {
   try {
     // Validate content type
     if (!validateContentType(request)) {
@@ -530,3 +602,7 @@ export async function DELETE() {
 export async function PATCH() {
   return addCORSHeaders(createMethodNotAllowedResponse(['GET', 'POST', 'OPTIONS']))
 }
+
+// Enhanced RBAC exports using the new middleware
+export const GET = createProtectedRoute(handleGetClients, '/api/clients')
+export const POST = createProtectedRoute(handleCreateClient, '/api/clients')

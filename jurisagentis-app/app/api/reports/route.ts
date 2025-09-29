@@ -19,9 +19,9 @@ interface Report {
   isFavorite: boolean
   config: {
     dataSource: string
-    filters: any[]
+    filters: Record<string, unknown>[]
     groupBy?: string[]
-    aggregations?: any[]
+    aggregations?: Record<string, unknown>[]
     dateRange?: string
     sortBy?: string
     sortOrder?: 'asc' | 'desc'
@@ -321,7 +321,7 @@ export async function DELETE(request: NextRequest) {
 }
 
 // Transform database format to API format
-function transformDbToApi(dbReport: any): Report {
+function transformDbToApi(dbReport: Record<string, unknown>): Report {
   return {
     id: dbReport.id,
     name: dbReport.name,

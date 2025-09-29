@@ -36,8 +36,8 @@ DECLARE
   event_visibility TEXT;
 BEGIN
   -- Get current user info
-  SELECT auth.jwt() ->> 'sub' INTO user_id;
-  SELECT role FROM user_profiles WHERE uid = user_id::UUID INTO user_role;
+  SELECT (auth.jwt() ->> 'sub')::UUID INTO user_id;
+  user_role := get_user_role(user_id);
   
   -- Get event details
   SELECT matter_id, client_id, organizer_id, assigned_attorney, assigned_paralegal, visibility
@@ -51,14 +51,14 @@ BEGIN
   END IF;
   
   -- Check if user is organizer, assigned attorney, or assigned paralegal
-  IF user_id::UUID IN (event_organizer_id, event_assigned_attorney, event_assigned_paralegal) THEN
+  IF user_id IN (event_organizer_id, event_assigned_attorney, event_assigned_paralegal) THEN
     RETURN TRUE;
   END IF;
   
   -- Check if user is an attendee
   IF EXISTS (
     SELECT 1 FROM event_attendees 
-    WHERE event_id = event_id_param AND user_id = user_id::UUID
+    WHERE event_id = event_id_param AND user_id = user_id
   ) THEN
     RETURN TRUE;
   END IF;
@@ -122,8 +122,7 @@ BEGIN
         SELECT 1 FROM clients c
         JOIN user_profiles up ON c.email = up.email
         WHERE c.id = event_client_id 
-        AND up.uid = user_id::UUID
-        AND up.role = 'client'
+        AND up.id = user_id
         AND c.deleted_at IS NULL
       );
     END IF;
@@ -134,8 +133,7 @@ BEGIN
       JOIN clients c ON ea.client_id = c.id
       JOIN user_profiles up ON c.email = up.email
       WHERE ea.event_id = event_id_param
-      AND up.uid = user_id::UUID
-      AND up.role = 'client'
+      AND up.id = user_id
     ) THEN
       RETURN TRUE;
     END IF;
@@ -152,19 +150,11 @@ CREATE POLICY "Calendar Events - Admin full access" ON calendar_events
   FOR ALL 
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role = 'admin'
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) = 'admin'
     AND deleted_at IS NULL
   )
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role = 'admin'
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) = 'admin'
   );
 
 -- Users: Read/write access to their own events and events they're assigned to
@@ -197,20 +187,12 @@ CREATE POLICY "Calendar Events - Attorney/Paralegal read/write matter events" ON
   FOR ALL 
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role IN ('associate_attorney', 'paralegal')
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) IN ('associate_attorney', 'paralegal')
     AND user_has_calendar_access(id, 'write')
     AND deleted_at IS NULL
   )
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role IN ('associate_attorney', 'paralegal')
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) IN ('associate_attorney', 'paralegal')
     AND user_has_calendar_access(id, 'write')
   );
 
@@ -219,11 +201,7 @@ CREATE POLICY "Calendar Events - Assistant read assigned events" ON calendar_eve
   FOR SELECT 
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role = 'assistant'
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) = 'assistant'
     AND user_has_calendar_access(id, 'read')
     AND deleted_at IS NULL
   );
@@ -233,11 +211,7 @@ CREATE POLICY "Calendar Events - Client read own events" ON calendar_events
   FOR SELECT 
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role = 'client'
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) = 'client'
     AND user_has_calendar_access(id, 'read')
     AND visibility NOT IN ('confidential', 'private')
     AND show_client_portal = true
@@ -270,18 +244,10 @@ CREATE POLICY "Court Calendars - Admin/Attorney full access" ON court_calendars
   FOR ALL 
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role IN ('admin', 'associate_attorney')
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) IN ('admin', 'associate_attorney')
   )
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role IN ('admin', 'associate_attorney')
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) IN ('admin', 'associate_attorney')
   );
 
 -- RLS Policies for deadline_rules table
@@ -297,18 +263,10 @@ CREATE POLICY "Deadline Rules - Admin/Attorney full access" ON deadline_rules
   FOR ALL 
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role IN ('admin', 'associate_attorney')
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) IN ('admin', 'associate_attorney')
   )
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role IN ('admin', 'associate_attorney')
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) IN ('admin', 'associate_attorney')
   );
 
 -- RLS Policies for holidays table
@@ -324,18 +282,10 @@ CREATE POLICY "Holidays - Admin full access" ON holidays
   FOR ALL 
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role = 'admin'
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) = 'admin'
   )
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role = 'admin'
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) = 'admin'
   );
 
 -- RLS Policies for calendar_preferences table
@@ -355,9 +305,7 @@ RETURNS BOOLEAN AS $$
 DECLARE
   user_role TEXT;
 BEGIN
-  SELECT role FROM user_profiles 
-  WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-  INTO user_role;
+  user_role := get_user_role((auth.jwt() ->> 'sub')::UUID);
   
   -- Admin and attorneys can schedule events for others
   RETURN user_role IN ('admin', 'associate_attorney');
@@ -370,9 +318,7 @@ RETURNS BOOLEAN AS $$
 DECLARE
   user_role TEXT;
 BEGIN
-  SELECT role FROM user_profiles 
-  WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-  INTO user_role;
+  user_role := get_user_role((auth.jwt() ->> 'sub')::UUID);
   
   -- All legal staff can access court calendars
   RETURN user_role IN ('admin', 'associate_attorney', 'paralegal', 'assistant');
@@ -385,9 +331,7 @@ RETURNS BOOLEAN AS $$
 DECLARE
   user_role TEXT;
 BEGIN
-  SELECT role FROM user_profiles 
-  WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-  INTO user_role;
+  user_role := get_user_role((auth.jwt() ->> 'sub')::UUID);
   
   -- Admin, attorneys, and paralegals can create deadlines
   RETURN user_role IN ('admin', 'associate_attorney', 'paralegal');

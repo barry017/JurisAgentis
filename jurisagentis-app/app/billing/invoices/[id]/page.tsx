@@ -6,21 +6,18 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { 
   DocumentTextIcon,
   PencilSquareIcon,
   PaperAirplaneIcon,
   PrinterIcon,
-  CurrencyDollarIcon,
   ClockIcon,
-  MapPinIcon,
   CheckCircleIcon,
   ExclamationTriangleIcon,
   ArrowLeftIcon,
   BanknotesIcon,
-  DocumentDuplicateIcon,
   CalendarIcon
 } from '@heroicons/react/24/outline'
 
@@ -79,7 +76,7 @@ interface InvoiceDetail {
 interface PaymentModalProps {
   invoice: InvoiceDetail
   onClose: () => void
-  onPaymentRecorded: (payment: any) => void
+  onPaymentRecorded: (payment: { amount: number; method: string; date: string; reference?: string; notes?: string }) => void
 }
 
 function PaymentModal({ invoice, onClose, onPaymentRecorded }: PaymentModalProps) {
@@ -228,9 +225,9 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
 
   useEffect(() => {
     loadInvoice()
-  }, [params.id])
+  }, [params.id, loadInvoice])
 
-  const loadInvoice = async () => {
+  const loadInvoice = useCallback(async () => {
     try {
       setLoading(true)
       
@@ -314,7 +311,7 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
     } finally {
       setLoading(false)
     }
-  }
+  }, [params.id])
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -353,7 +350,7 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
     )
   }
 
-  const handlePaymentRecorded = (paymentData: any) => {
+  const handlePaymentRecorded = (paymentData: { amount: number; payment_method: string; payment_date: string; notes?: string }) => {
     if (invoice) {
       const newPayment = {
         ...paymentData,

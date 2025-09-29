@@ -6,14 +6,12 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { 
   DocumentTextIcon,
   PlusIcon,
   XMarkIcon,
-  CalendarIcon,
-  CurrencyDollarIcon,
   UserGroupIcon,
   DocumentDuplicateIcon,
   CheckCircleIcon,
@@ -154,9 +152,9 @@ export default function EditInvoicePage({ params }: { params: { id: string } }) 
   // Load existing invoice data
   useEffect(() => {
     loadInvoice()
-  }, [params.id])
+  }, [params.id, loadInvoice])
 
-  const loadInvoice = async () => {
+  const loadInvoice = useCallback(async () => {
     try {
       setLoading(true)
       
@@ -225,7 +223,7 @@ export default function EditInvoicePage({ params }: { params: { id: string } }) 
     } finally {
       setLoading(false)
     }
-  }
+  }, [params.id, availableMatters])
 
   // Calculate totals
   const subtotal = lineItems.reduce((sum, item) => sum + (item.amount * item.quantity), 0)
@@ -260,7 +258,7 @@ export default function EditInvoicePage({ params }: { params: { id: string } }) 
     setLineItems([...lineItems, newItem])
   }
 
-  const updateLineItem = (id: string, field: keyof LineItem, value: any) => {
+  const updateLineItem = (id: string, field: keyof LineItem, value: string | number) => {
     setLineItems(lineItems.map(item =>
       item.id === id ? { ...item, [field]: value } : item
     ))
@@ -453,7 +451,7 @@ export default function EditInvoicePage({ params }: { params: { id: string } }) 
                   </label>
                   <select
                     value={billingType}
-                    onChange={(e) => setBillingType(e.target.value as any)}
+                    onChange={(e) => setBillingType(e.target.value as 'flat_fee' | 'hourly' | 'retainer')}
                     className={`input-field ${!canEdit ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                     disabled={!canEdit}
                   >

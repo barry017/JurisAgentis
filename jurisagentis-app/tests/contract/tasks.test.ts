@@ -4,10 +4,9 @@
  * Tests the tasks API endpoints (/api/tasks)
  */
 
-import { NextRequest } from 'next/server'
 
 describe('Tasks API - Contract Tests', () => {
-  const baseUrl = 'http://localhost:3000'
+  const baseUrl = 'http://localhost:3001'
   let validToken: string
 
   beforeAll(async () => {
@@ -108,7 +107,7 @@ describe('Tasks API - Contract Tests', () => {
       expect(data.success).toBe(true)
       
       // All returned tasks should have the specified matter_id
-      data.data.tasks.forEach((task: any) => {
+      data.data.tasks.forEach((task: { matter_id: string; status?: string; priority?: string; assigned_to?: string; id?: string; title?: string; description?: string; due_date?: string }) => {
         expect(task.matter_id).toBe('matter-1')
       })
     })
@@ -126,7 +125,7 @@ describe('Tasks API - Contract Tests', () => {
       expect(data.success).toBe(true)
       
       // All returned tasks should have in_progress status
-      data.data.tasks.forEach((task: any) => {
+      data.data.tasks.forEach((task: { matter_id: string; status?: string; priority?: string; assigned_to?: string; id?: string; title?: string; description?: string; due_date?: string }) => {
         expect(task.status).toBe('in_progress')
       })
     })
@@ -144,7 +143,7 @@ describe('Tasks API - Contract Tests', () => {
       expect(data.success).toBe(true)
       
       // All returned tasks should have urgent priority
-      data.data.tasks.forEach((task: any) => {
+      data.data.tasks.forEach((task: { matter_id: string; status?: string; priority?: string; assigned_to?: string; id?: string; title?: string; description?: string; due_date?: string }) => {
         expect(task.priority).toBe('urgent')
       })
     })
@@ -170,7 +169,7 @@ describe('Tasks API - Contract Tests', () => {
         
         // Results should contain tasks matching the search term
         if (data.data.tasks.length > 0) {
-          const hasMatch = data.data.tasks.some((task: any) => 
+          const hasMatch = data.data.tasks.some((task: unknown) => 
             task.title.toLowerCase().includes(test.term.toLowerCase()) ||
             (task.description && task.description.toLowerCase().includes(test.term.toLowerCase())) ||
             (task.task_type && task.task_type.toLowerCase().includes(test.term.toLowerCase())) ||
@@ -195,7 +194,7 @@ describe('Tasks API - Contract Tests', () => {
       
       // All returned tasks should be overdue (due_date < today and not completed)
       const today = new Date().toISOString().split('T')[0]
-      data.data.tasks.forEach((task: any) => {
+      data.data.tasks.forEach((task: { matter_id: string; status?: string; priority?: string; assigned_to?: string; id?: string; title?: string; description?: string; due_date?: string }) => {
         if (task.due_date) {
           expect(task.due_date < today || task.status !== 'completed').toBe(true)
         }
@@ -215,7 +214,7 @@ describe('Tasks API - Contract Tests', () => {
       expect(data.success).toBe(true)
       
       // All returned tasks should be billable
-      data.data.tasks.forEach((task: any) => {
+      data.data.tasks.forEach((task: { matter_id: string; status?: string; priority?: string; assigned_to?: string; id?: string; title?: string; description?: string; due_date?: string }) => {
         expect(task.billable).toBe(true)
       })
     })
@@ -271,7 +270,7 @@ describe('Tasks API - Contract Tests', () => {
       expect(data.success).toBe(true)
       
       // All returned tasks should have due dates within the range
-      data.data.tasks.forEach((task: any) => {
+      data.data.tasks.forEach((task: { matter_id: string; status?: string; priority?: string; assigned_to?: string; id?: string; title?: string; description?: string; due_date?: string }) => {
         if (task.due_date) {
           expect(task.due_date >= fromDate && task.due_date <= toDate).toBe(true)
         }

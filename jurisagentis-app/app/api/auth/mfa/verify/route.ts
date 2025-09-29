@@ -10,7 +10,7 @@ import {
   createSuccessResponse, 
   createErrorResponse,
   createMethodNotAllowedResponse,
-  createRateLimitResponse,
+  // createRateLimitResponse, // Unused for now but keeping import for future rate limiting
   parseRequestBody,
   validateContentType,
   addCORSHeaders
@@ -210,7 +210,7 @@ export async function POST(request: NextRequest) {
     } else {
       // Increment failed attempts
       const newFailedAttempts = (mfaEnrollment.failed_attempts || 0) + 1
-      let updateData: any = {
+      const updateData: { failed_attempts: number; locked_until?: string } = {
         failed_attempts: newFailedAttempts
       }
 

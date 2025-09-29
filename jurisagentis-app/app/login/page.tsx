@@ -51,7 +51,7 @@ export default function LoginPage() {
       } else {
         setError(result.error || 'Login failed')
       }
-    } catch (error) {
+    } catch (_error) {
       setError('An unexpected error occurred')
     } finally {
       setLoading(false)
@@ -72,7 +72,7 @@ export default function LoginPage() {
         setError(result.error || 'MFA verification failed')
         setMfaCode('')
       }
-    } catch (error) {
+    } catch (_error) {
       setError('An unexpected error occurred')
     } finally {
       setLoading(false)

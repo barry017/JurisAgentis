@@ -14,7 +14,7 @@ describe('POST /api/auth/logout - Contract Test', () => {
 
   describe('Authentication Required', () => {
     it('should reject requests without authentication token', async () => {
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -33,7 +33,7 @@ describe('POST /api/auth/logout - Contract Test', () => {
     it('should accept logout without request body (current session only)', async () => {
       const validToken = 'valid-jwt-token'
       
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -50,7 +50,7 @@ describe('POST /api/auth/logout - Contract Test', () => {
         allSessions: true
       }
 
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -68,7 +68,7 @@ describe('POST /api/auth/logout - Contract Test', () => {
         allSessions: false
       }
 
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -86,7 +86,7 @@ describe('POST /api/auth/logout - Contract Test', () => {
         invalidField: 'invalid-value'
       }
 
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -106,7 +106,7 @@ describe('POST /api/auth/logout - Contract Test', () => {
     it('should return success response for single session logout', async () => {
       const validToken = 'valid-jwt-token'
       
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -128,7 +128,7 @@ describe('POST /api/auth/logout - Contract Test', () => {
       const validToken = 'valid-jwt-token'
       const requestBody = { allSessions: true }
       
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -150,7 +150,7 @@ describe('POST /api/auth/logout - Contract Test', () => {
     it('should handle already logged out token gracefully', async () => {
       const expiredToken = 'expired-jwt-token'
       
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -171,7 +171,7 @@ describe('POST /api/auth/logout - Contract Test', () => {
       const validToken = 'valid-jwt-token'
       
       // First, logout
-      const logoutResponse = await fetch(`http://localhost:3000${endpoint}`, {
+      const logoutResponse = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -182,7 +182,7 @@ describe('POST /api/auth/logout - Contract Test', () => {
       expect(logoutResponse.status).toBe(200)
 
       // Then try to use the same token for authenticated request
-      const authTestResponse = await fetch(`http://localhost:3000/api/auth/user`, {
+      const authTestResponse = await fetch(`http://localhost:3001/api/auth/user`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${validToken}`,
@@ -196,7 +196,7 @@ describe('POST /api/auth/logout - Contract Test', () => {
     it('should include security headers', async () => {
       const validToken = 'valid-jwt-token'
       
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -213,7 +213,7 @@ describe('POST /api/auth/logout - Contract Test', () => {
     it('should clear sensitive cookies', async () => {
       const validToken = 'valid-jwt-token'
       
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -232,7 +232,7 @@ describe('POST /api/auth/logout - Contract Test', () => {
 
   describe('HTTP Method Contract', () => {
     it('should reject GET requests', async () => {
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'GET',
         headers: {
           'Authorization': 'Bearer valid-token',
@@ -243,7 +243,7 @@ describe('POST /api/auth/logout - Contract Test', () => {
     })
 
     it('should reject PUT requests', async () => {
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'PUT',
         headers: {
           'Authorization': 'Bearer valid-token',
@@ -256,7 +256,7 @@ describe('POST /api/auth/logout - Contract Test', () => {
     })
 
     it('should reject DELETE requests', async () => {
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'DELETE',
         headers: {
           'Authorization': 'Bearer valid-token',
@@ -271,7 +271,7 @@ describe('POST /api/auth/logout - Contract Test', () => {
     it('should log logout events for audit trail', async () => {
       const validToken = 'valid-jwt-token'
       
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -289,7 +289,7 @@ describe('POST /api/auth/logout - Contract Test', () => {
       const validToken = 'valid-jwt-token'
       const requestBody = { allSessions: true }
       
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -308,7 +308,7 @@ describe('POST /api/auth/logout - Contract Test', () => {
     it('should handle missing Content-Type gracefully for empty body', async () => {
       const validToken = 'valid-jwt-token'
       
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${validToken}`,
@@ -323,7 +323,7 @@ describe('POST /api/auth/logout - Contract Test', () => {
       const validToken = 'valid-jwt-token'
       const requestBody = { allSessions: true }
       
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${validToken}`,

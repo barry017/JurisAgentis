@@ -11,23 +11,16 @@ import { useRouter } from 'next/navigation'
 import { 
   ChatBubbleLeftRightIcon,
   PaperAirplaneIcon,
-  UserIcon,
   MagnifyingGlassIcon,
-  FunnelIcon,
   PlusIcon,
   PhoneIcon,
-  VideoIcon,
+  VideoCameraIcon as VideoIcon, // VideoCameraIcon is the correct name
   DocumentIcon,
   PaperClipIcon,
   EllipsisVerticalIcon,
   CheckIcon,
   ExclamationTriangleIcon,
-  ClockIcon,
   StarIcon,
-  ArchiveBoxIcon,
-  TrashIcon,
-  BellIcon,
-  BellSlashIcon
 } from '@heroicons/react/24/outline'
 
 interface Message {
@@ -228,14 +221,14 @@ const mockMessages: Message[] = [
 ]
 
 export default function MessagesPage() {
-  const router = useRouter()
+  const _router = useRouter()
   const [threads, setThreads] = useState<MessageThread[]>(mockThreads)
   const [selectedThread, setSelectedThread] = useState<MessageThread | null>(mockThreads[0])
   const [messages, setMessages] = useState<Message[]>(mockMessages)
   const [newMessage, setNewMessage] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
-  const [showFilters, setShowFilters] = useState(false)
-  const [isComposing, setIsComposing] = useState(false)
+  const [_showFilters, _setShowFilters] = useState(false)
+  const [_isComposing, _setIsComposing] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messageInputRef = useRef<HTMLTextAreaElement>(null)
 

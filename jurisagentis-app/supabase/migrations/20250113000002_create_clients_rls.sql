@@ -21,8 +21,8 @@ DECLARE
   user_id UUID;
 BEGIN
   -- Get current user info
-  SELECT auth.jwt() ->> 'sub' INTO user_id;
-  SELECT role FROM user_profiles WHERE uid = user_id::UUID INTO user_role;
+  user_id := (auth.jwt() ->> 'sub')::UUID;
+  user_role := get_user_role(user_id);
   
   -- Admin has access to all clients
   IF user_role = 'admin' THEN
@@ -56,7 +56,7 @@ BEGIN
       SELECT 1 FROM clients c
       JOIN user_profiles up ON c.email = up.email
       WHERE c.id = client_id 
-      AND up.uid = user_id::UUID
+      AND up.id = user_id
       AND c.deleted_at IS NULL
     );
   END IF;
@@ -78,18 +78,10 @@ CREATE POLICY "Clients - Admin full access" ON clients
   FOR ALL 
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role = 'admin'
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) = 'admin'
   )
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role = 'admin'
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) = 'admin'
   );
 
 -- Attorney/Paralegal: Read/write access to assigned clients (for now, all active clients)
@@ -97,19 +89,11 @@ CREATE POLICY "Clients - Attorney/Paralegal read/write assigned" ON clients
   FOR ALL 
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role IN ('associate_attorney', 'paralegal')
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) IN ('associate_attorney', 'paralegal')
     AND deleted_at IS NULL
   )
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role IN ('associate_attorney', 'paralegal')
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) IN ('associate_attorney', 'paralegal')
   );
 
 -- Assistant: Read-only access to assigned clients
@@ -117,11 +101,7 @@ CREATE POLICY "Clients - Assistant read assigned" ON clients
   FOR SELECT 
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role = 'assistant'
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) = 'assistant'
     AND deleted_at IS NULL
   );
 
@@ -130,10 +110,11 @@ CREATE POLICY "Clients - Client read own record" ON clients
   FOR SELECT 
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles up
-      WHERE up.uid = (auth.jwt() ->> 'sub')::UUID 
-      AND up.role = 'client'
+    get_user_role((auth.jwt() ->> 'sub')::UUID) = 'client'
+    AND EXISTS (
+      SELECT 1
+      FROM user_profiles up
+      WHERE up.id = (auth.jwt() ->> 'sub')::UUID
       AND up.email = clients.email
     )
     AND deleted_at IS NULL
@@ -146,18 +127,10 @@ CREATE POLICY "Client Contacts - Admin full access" ON client_contacts
   FOR ALL 
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role = 'admin'
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) = 'admin'
   )
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role = 'admin'
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) = 'admin'
   );
 
 -- Attorney/Paralegal: Read/write access to contacts for assigned clients
@@ -165,20 +138,12 @@ CREATE POLICY "Client Contacts - Attorney/Paralegal read/write for assigned clie
   FOR ALL 
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role IN ('associate_attorney', 'paralegal')
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) IN ('associate_attorney', 'paralegal')
     AND user_has_client_access(client_id)
     AND deleted_at IS NULL
   )
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role IN ('associate_attorney', 'paralegal')
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) IN ('associate_attorney', 'paralegal')
     AND user_has_client_access(client_id)
   );
 
@@ -187,11 +152,7 @@ CREATE POLICY "Client Contacts - Assistant read for assigned clients" ON client_
   FOR SELECT 
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role = 'assistant'
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) = 'assistant'
     AND user_has_client_access(client_id)
     AND deleted_at IS NULL
   );
@@ -201,11 +162,11 @@ CREATE POLICY "Client Contacts - Client read own contacts" ON client_contacts
   FOR SELECT 
   TO authenticated
   USING (
-    EXISTS (
+    get_user_role((auth.jwt() ->> 'sub')::UUID) = 'client'
+    AND EXISTS (
       SELECT 1 FROM user_profiles up
       JOIN clients c ON c.email = up.email
-      WHERE up.uid = (auth.jwt() ->> 'sub')::UUID 
-      AND up.role = 'client'
+      WHERE up.id = (auth.jwt() ->> 'sub')::UUID 
       AND c.id = client_contacts.client_id
     )
     AND deleted_at IS NULL

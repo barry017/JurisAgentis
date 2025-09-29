@@ -39,14 +39,14 @@ CREATE TABLE IF NOT EXISTS workflow_templates (
     parent_template_id UUID REFERENCES workflow_templates(id),
     
     -- Template Management
-    created_by UUID NOT NULL REFERENCES user_profiles(uid),
-    updated_by UUID NOT NULL REFERENCES user_profiles(uid),
+    created_by UUID REFERENCES user_profiles(id) ON DELETE SET NULL,
+    updated_by UUID REFERENCES user_profiles(id) ON DELETE SET NULL,
     
     -- Audit Fields
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     deleted_at TIMESTAMP WITH TIME ZONE,
-    deleted_by UUID REFERENCES user_profiles(uid)
+    deleted_by UUID REFERENCES user_profiles(id) ON DELETE SET NULL
 );
 
 -- Workflow executions table - tracks individual workflow runs
@@ -59,13 +59,13 @@ CREATE TABLE IF NOT EXISTS workflow_executions (
     
     -- Trigger Information
     triggered_by_event VARCHAR(100) NOT NULL,
-    triggered_by_user UUID REFERENCES user_profiles(uid),
+    triggered_by_user UUID REFERENCES user_profiles(id),
     trigger_data JSONB, -- Data that triggered the workflow
     
     -- Context Objects
     client_id UUID REFERENCES clients(id) ON DELETE SET NULL,
     matter_id UUID REFERENCES matters(id) ON DELETE SET NULL,
-    document_id UUID REFERENCES documents(id) ON DELETE SET NULL,
+    document_id UUID,
     
     -- Execution Status
     status VARCHAR(50) DEFAULT 'pending', -- 'pending', 'running', 'completed', 'failed', 'cancelled', 'paused'
@@ -125,9 +125,9 @@ CREATE TABLE IF NOT EXISTS workflow_steps (
     duration_ms INTEGER,
     
     -- Human Task Information (for approval steps, etc.)
-    assigned_to UUID REFERENCES user_profiles(uid),
+    assigned_to UUID REFERENCES user_profiles(id),
     requires_approval BOOLEAN DEFAULT false,
-    approved_by UUID REFERENCES user_profiles(uid),
+    approved_by UUID REFERENCES user_profiles(id),
     approved_at TIMESTAMP WITH TIME ZONE,
     approval_notes TEXT,
     
@@ -159,7 +159,7 @@ CREATE TABLE IF NOT EXISTS workflow_triggers (
     
     -- Audit Fields
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    created_by UUID NOT NULL REFERENCES user_profiles(uid)
+    created_by UUID REFERENCES user_profiles(id) ON DELETE SET NULL
 );
 
 -- Workflow variables table - stores variables used during workflow execution
@@ -221,7 +221,7 @@ CREATE TABLE IF NOT EXISTS workflow_approvals (
     
     -- Final Approval
     final_decision VARCHAR(50), -- 'approved', 'rejected'
-    final_approver UUID REFERENCES user_profiles(uid),
+    final_approver UUID REFERENCES user_profiles(id),
     approval_notes TEXT
 );
 
@@ -252,7 +252,7 @@ CREATE TABLE IF NOT EXISTS workflow_schedules (
     
     -- Audit Fields
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    created_by UUID NOT NULL REFERENCES user_profiles(uid)
+    created_by UUID NOT NULL REFERENCES user_profiles(id)
 );
 
 -- Create indexes for performance
@@ -297,11 +297,7 @@ CREATE POLICY "Admins can manage all workflow templates" ON workflow_templates
   FOR ALL 
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role = 'admin'
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) = 'admin'
     AND deleted_at IS NULL
   );
 
@@ -314,11 +310,7 @@ CREATE POLICY "Users can view workflow templates" ON workflow_templates
       -- Created by them
       created_by = (auth.jwt() ->> 'sub')::UUID OR
       -- They have required permissions
-      EXISTS (
-        SELECT 1 FROM user_profiles up
-        WHERE up.uid = (auth.jwt() ->> 'sub')::UUID
-        AND (required_permissions IS NULL OR up.role = ANY(required_permissions))
-      )
+      required_permissions IS NULL OR get_user_role((auth.jwt() ->> 'sub')::UUID) = ANY(required_permissions)
     )
   );
 
@@ -335,11 +327,7 @@ CREATE POLICY "Users can view related workflow executions" ON workflow_execution
       WHERE ws.execution_id = workflow_executions.id
       AND ws.assigned_to = (auth.jwt() ->> 'sub')::UUID
     ) OR
-    EXISTS (
-      SELECT 1 FROM user_profiles up
-      WHERE up.uid = (auth.jwt() ->> 'sub')::UUID
-      AND up.role IN ('admin', 'associate_attorney')
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) IN ('admin', 'associate_attorney')
   );
 
 -- Users can create workflow executions
@@ -361,11 +349,7 @@ CREATE POLICY "Users can update related workflow executions" ON workflow_executi
       WHERE ws.execution_id = workflow_executions.id
       AND ws.assigned_to = (auth.jwt() ->> 'sub')::UUID
     ) OR
-    EXISTS (
-      SELECT 1 FROM user_profiles up
-      WHERE up.uid = (auth.jwt() ->> 'sub')::UUID
-      AND up.role IN ('admin', 'associate_attorney')
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) IN ('admin', 'associate_attorney')
   );
 
 -- Similar policies for other workflow tables...
@@ -379,11 +363,7 @@ CREATE POLICY "Users can manage workflow steps" ON workflow_steps
       WHERE we.id = workflow_steps.execution_id
       AND we.triggered_by_user = (auth.jwt() ->> 'sub')::UUID
     ) OR
-    EXISTS (
-      SELECT 1 FROM user_profiles up
-      WHERE up.uid = (auth.jwt() ->> 'sub')::UUID
-      AND up.role IN ('admin', 'associate_attorney')
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) IN ('admin', 'associate_attorney')
   );
 
 -- Workflow automation functions
@@ -693,9 +673,9 @@ INSERT INTO workflow_templates (
       }
     ]
   }'::JSONB,
-  (SELECT uid FROM user_profiles WHERE role = 'admin' LIMIT 1),
-  (SELECT uid FROM user_profiles WHERE role = 'admin' LIMIT 1)
-);
+  (SELECT id FROM user_profiles WHERE get_user_role(id) = 'admin' LIMIT 1),
+  (SELECT id FROM user_profiles WHERE get_user_role(id) = 'admin' LIMIT 1)
+) ON CONFLICT (template_code) DO NOTHING;
 
 -- Estate Planning Matter Workflow
 INSERT INTO workflow_templates (
@@ -766,8 +746,6 @@ INSERT INTO workflow_templates (
       }
     ]
   }'::JSONB,
-  (SELECT uid FROM user_profiles WHERE role = 'admin' LIMIT 1),
-  (SELECT uid FROM user_profiles WHERE role = 'admin' LIMIT 1)
-);
-
-ON CONFLICT (template_code) DO NOTHING;
+  (SELECT id FROM user_profiles WHERE get_user_role(id) = 'admin' LIMIT 1),
+  (SELECT id FROM user_profiles WHERE get_user_role(id) = 'admin' LIMIT 1)
+) ON CONFLICT (template_code) DO NOTHING;

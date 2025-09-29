@@ -56,6 +56,17 @@ interface MFARequiredResponse {
   tempToken: string
 }
 
+interface SessionData {
+  expires_at: number
+  [key: string]: unknown
+}
+
+interface DeviceInfo {
+  userAgent?: string
+  ipAddress?: string
+  [key: string]: unknown
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Validate content type
@@ -259,7 +270,7 @@ export async function POST(request: NextRequest) {
           
           return createErrorResponse(
             'ACCOUNT_LOCKED',
-            'Account is temporarily locked due to multiple failed MFA attempts',
+            `Account is temporarily locked due to multiple failed MFA attempts. Retry after ${retryAfter} seconds.`,
             429,
             { lockedUntil: lockedUntil.toISOString() }
           )
@@ -361,6 +372,7 @@ export async function POST(request: NextRequest) {
       return addCORSHeaders(response, request.headers.get('origin') || undefined)
 
     } catch (profileError) {
+      console.error('Profile lookup failed:', profileError)
       await logAuditEvent('AUTH_LOGIN_FAILURE', user.id, request, {
         email: body.email,
         reason: 'Profile lookup failed'
@@ -411,9 +423,9 @@ export async function OPTIONS(request: NextRequest) {
  */
 async function createUserSession(
   uid: string, 
-  session: any, 
+  session: SessionData, 
   request: NextRequest,
-  deviceInfo: any
+  deviceInfo: DeviceInfo
 ) {
   const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
   const expiresAt = new Date(session.expires_at * 1000).toISOString()

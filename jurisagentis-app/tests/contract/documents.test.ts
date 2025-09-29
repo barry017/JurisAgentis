@@ -4,10 +4,9 @@
  * Tests the documents API endpoints (/api/documents)
  */
 
-import { NextRequest } from 'next/server'
 
 describe('Documents API - Contract Tests', () => {
-  const baseUrl = 'http://localhost:3000'
+  const baseUrl = 'http://localhost:3001'
   let validToken: string
 
   beforeAll(async () => {
@@ -114,7 +113,7 @@ describe('Documents API - Contract Tests', () => {
       expect(data.success).toBe(true)
       
       // All returned documents should have the specified client_id
-      data.data.documents.forEach((document: any) => {
+      data.data.documents.forEach((document: Record<string, unknown>) => {
         expect(document.client_id).toBe('client-1')
       })
     })
@@ -132,7 +131,7 @@ describe('Documents API - Contract Tests', () => {
       expect(data.success).toBe(true)
       
       // All returned documents should have the specified matter_id
-      data.data.documents.forEach((document: any) => {
+      data.data.documents.forEach((document: Record<string, unknown>) => {
         expect(document.matter_id).toBe('matter-1')
       })
     })
@@ -150,7 +149,7 @@ describe('Documents API - Contract Tests', () => {
       expect(data.success).toBe(true)
       
       // All returned documents should have the specified document_type
-      data.data.documents.forEach((document: any) => {
+      data.data.documents.forEach((document: Record<string, unknown>) => {
         expect(document.document_type).toBe('contract')
       })
     })
@@ -168,7 +167,7 @@ describe('Documents API - Contract Tests', () => {
       expect(data.success).toBe(true)
       
       // All returned documents should have the specified document_category
-      data.data.documents.forEach((document: any) => {
+      data.data.documents.forEach((document: Record<string, unknown>) => {
         expect(document.document_category).toBe('estate_planning')
       })
     })
@@ -186,7 +185,7 @@ describe('Documents API - Contract Tests', () => {
       expect(data.success).toBe(true)
       
       // All returned documents should have the specified status
-      data.data.documents.forEach((document: any) => {
+      data.data.documents.forEach((document: Record<string, unknown>) => {
         expect(document.status).toBe('final')
       })
     })
@@ -204,7 +203,7 @@ describe('Documents API - Contract Tests', () => {
       expect(data.success).toBe(true)
       
       // All returned documents should have the specified confidentiality_level
-      data.data.documents.forEach((document: any) => {
+      data.data.documents.forEach((document: Record<string, unknown>) => {
         expect(document.confidentiality_level).toBe('client_confidential')
       })
     })
@@ -231,11 +230,11 @@ describe('Documents API - Contract Tests', () => {
         
         // Results should contain documents matching the search term
         if (data.data.documents.length > 0) {
-          const hasMatch = data.data.documents.some((document: any) => 
-            document.document_number.toLowerCase().includes(test.term.toLowerCase()) ||
-            document.title.toLowerCase().includes(test.term.toLowerCase()) ||
-            (document.description && document.description.toLowerCase().includes(test.term.toLowerCase())) ||
-            document.file_name.toLowerCase().includes(test.term.toLowerCase())
+          const hasMatch = data.data.documents.some((document: Record<string, unknown>) => 
+            (document.document_number as string).toLowerCase().includes(test.term.toLowerCase()) ||
+            (document.title as string).toLowerCase().includes(test.term.toLowerCase()) ||
+            (document.description && (document.description as string).toLowerCase().includes(test.term.toLowerCase())) ||
+            (document.file_name as string).toLowerCase().includes(test.term.toLowerCase())
           )
           expect(hasMatch).toBe(true)
         }
@@ -255,7 +254,7 @@ describe('Documents API - Contract Tests', () => {
       expect(data.success).toBe(true)
       
       // All returned documents should contain the specified tag
-      data.data.documents.forEach((document: any) => {
+      data.data.documents.forEach((document: Record<string, unknown>) => {
         if (document.tags) {
           expect(document.tags).toContain('trust')
         }

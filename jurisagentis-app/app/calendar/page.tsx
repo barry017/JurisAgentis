@@ -6,8 +6,9 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
 import { 
   CalendarDaysIcon,
   ChevronLeftIcon,
@@ -21,14 +22,9 @@ import {
   ExclamationTriangleIcon,
   MagnifyingGlassIcon,
   FunnelIcon,
-  EyeIcon,
   PencilIcon,
   XMarkIcon,
   CheckIcon,
-  BellIcon,
-  VideoCameraIcon,
-  PhoneIcon,
-  BuildingOfficeIcon
 } from '@heroicons/react/24/outline'
 
 interface CalendarEvent {
@@ -119,8 +115,8 @@ interface EventFormData {
 type ViewMode = 'month' | 'week' | 'day'
 
 export default function CalendarPage() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
+  const _router = useRouter()
+  const _searchParams = useSearchParams()
   
   // State
   const [events, setEvents] = useState<CalendarEvent[]>([])
@@ -128,7 +124,7 @@ export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [viewMode, setViewMode] = useState<ViewMode>('month')
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
-  const [showEventModal, setShowEventModal] = useState(false)
+  const [_showEventModal, _setShowEventModal] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [filterBy, setFilterBy] = useState<'all' | 'client' | 'court' | 'deadline' | 'internal'>('all')
@@ -168,11 +164,7 @@ export default function CalendarPage() {
     confirmation_required: false
   })
 
-  useEffect(() => {
-    loadEvents()
-  }, [currentDate, viewMode])
-
-  const loadEvents = async () => {
+  const loadEvents = useCallback(async () => {
     try {
       setLoading(true)
       
@@ -211,9 +203,10 @@ export default function CalendarPage() {
         params.append('search', searchQuery)
       }
       
+      const { data: { session } } = await supabase.auth.getSession()
       const response = await fetch(`/api/calendar?${params}`, {
         headers: {
-          'Authorization': `Bearer mock-token-development`,
+          ...(session?.access_token && { 'Authorization': `Bearer ${session.access_token}` }),
           'Content-Type': 'application/json'
         }
       })
@@ -230,7 +223,11 @@ export default function CalendarPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [currentDate, viewMode, filterBy, searchQuery])
+
+  useEffect(() => {
+    loadEvents()
+  }, [currentDate, viewMode, loadEvents])
 
   const handleCreateEvent = async () => {
     try {
@@ -267,10 +264,11 @@ export default function CalendarPage() {
         tags: formData.tags
       }
       
+      const { data: { session } } = await supabase.auth.getSession()
       const response = await fetch('/api/calendar', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer mock-token-development`,
+          ...(session?.access_token && { 'Authorization': `Bearer ${session.access_token}` }),
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(eventData)
@@ -513,7 +511,7 @@ export default function CalendarPage() {
                 <label className="form-label">Event Category</label>
                 <select
                   value={filterBy}
-                  onChange={(e) => setFilterBy(e.target.value as any)}
+                  onChange={(e) => setFilterBy(e.target.value as 'all' | 'client' | 'court' | 'deadline' | 'internal')}
                   className="input-field"
                 >
                   <option value="all">All Categories</option>

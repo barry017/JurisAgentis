@@ -103,7 +103,7 @@ export default function NewClientPage() {
         <div className="text-center">
           <ExclamationTriangleIcon className="h-12 w-12 text-red-500 mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h2>
-          <p className="text-gray-600 mb-4">You don't have permission to create new clients.</p>
+          <p className="text-gray-600 mb-4">You don&apos;t have permission to create new clients.</p>
           <button
             onClick={() => router.push('/dashboard')}
             className="btn-primary"
@@ -656,7 +656,7 @@ export default function NewClientPage() {
                       value: e.target.checked.toString(),
                       type: 'checkbox'
                     }
-                  } as any)}
+                  } as React.ChangeEvent<HTMLInputElement>)}
                   className="h-4 w-4 text-blue-600 rounded"
                 />
                 <span className="ml-2 text-sm text-gray-700">Email case updates and communications</span>
@@ -673,7 +673,7 @@ export default function NewClientPage() {
                       value: e.target.checked.toString(),
                       type: 'checkbox'
                     }
-                  } as any)}
+                  } as React.ChangeEvent<HTMLInputElement>)}
                   className="h-4 w-4 text-blue-600 rounded"
                 />
                 <span className="ml-2 text-sm text-gray-700">SMS notifications for urgent matters</span>
@@ -690,7 +690,7 @@ export default function NewClientPage() {
                       value: e.target.checked.toString(),
                       type: 'checkbox'
                     }
-                  } as any)}
+                  } as React.ChangeEvent<HTMLInputElement>)}
                   className="h-4 w-4 text-blue-600 rounded"
                 />
                 <span className="ml-2 text-sm text-gray-700">Legal newsletter and updates</span>
@@ -707,7 +707,7 @@ export default function NewClientPage() {
                       value: e.target.checked.toString(),
                       type: 'checkbox'
                     }
-                  } as any)}
+                  } as React.ChangeEvent<HTMLInputElement>)}
                   className="h-4 w-4 text-blue-600 rounded"
                 />
                 <span className="ml-2 text-sm text-gray-700">Marketing communications and promotional materials</span>

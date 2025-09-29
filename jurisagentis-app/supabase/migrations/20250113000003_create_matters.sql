@@ -42,9 +42,9 @@ CREATE TABLE IF NOT EXISTS matters (
   ),
   
   -- Assignment and Responsibility
-  responsible_attorney UUID REFERENCES user_profiles(uid),
-  assisting_paralegal UUID REFERENCES user_profiles(uid),
-  originating_attorney UUID REFERENCES user_profiles(uid), -- For referrals/credits
+  responsible_attorney UUID REFERENCES user_profiles(id),
+  assisting_paralegal UUID REFERENCES user_profiles(id),
+  originating_attorney UUID REFERENCES user_profiles(id), -- For referrals/credits
   
   -- Matter Details
   complexity_level INTEGER CHECK (complexity_level >= 1 AND complexity_level <= 5),
@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS matters (
   -- Compliance and Tracking
   conflict_cleared BOOLEAN DEFAULT false,
   conflict_cleared_date DATE,
-  conflict_cleared_by UUID REFERENCES user_profiles(uid),
+  conflict_cleared_by UUID REFERENCES user_profiles(id),
   
   -- Custom Fields for Different Practice Areas
   custom_fields JSONB, -- Flexible storage for practice-specific fields
@@ -71,12 +71,12 @@ CREATE TABLE IF NOT EXISTS matters (
   -- Metadata
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  created_by UUID NOT NULL REFERENCES user_profiles(uid),
-  updated_by UUID NOT NULL REFERENCES user_profiles(uid),
+  created_by UUID NOT NULL REFERENCES user_profiles(id),
+  updated_by UUID NOT NULL REFERENCES user_profiles(id),
   
   -- Soft delete
   deleted_at TIMESTAMP,
-  deleted_by UUID REFERENCES user_profiles(uid)
+  deleted_by UUID REFERENCES user_profiles(id)
 );
 
 -- Create indexes for efficient queries
@@ -129,8 +129,8 @@ CREATE TABLE IF NOT EXISTS matter_tasks (
   ),
   
   -- Assignment
-  assigned_to UUID REFERENCES user_profiles(uid),
-  created_by UUID NOT NULL REFERENCES user_profiles(uid),
+  assigned_to UUID REFERENCES user_profiles(id),
+  created_by UUID NOT NULL REFERENCES user_profiles(id),
   
   -- Dates and Time Tracking
   due_date DATE,
@@ -214,7 +214,7 @@ CREATE TABLE IF NOT EXISTS matter_participants (
   -- Metadata
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  created_by UUID NOT NULL REFERENCES user_profiles(uid),
+  created_by UUID NOT NULL REFERENCES user_profiles(id),
   
   -- Soft delete
   deleted_at TIMESTAMP
@@ -231,6 +231,22 @@ CREATE TRIGGER trigger_matter_participants_updated_at
   BEFORE UPDATE ON matter_participants
   FOR EACH ROW
   EXECUTE FUNCTION update_matters_updated_at();
+
+-- Matter access control table for user-level permissions on matters
+CREATE TABLE IF NOT EXISTS matter_access (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  matter_id UUID NOT NULL REFERENCES matters(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
+  can_view BOOLEAN DEFAULT true,
+  can_edit BOOLEAN DEFAULT false,
+  can_manage BOOLEAN DEFAULT false,
+  granted_by UUID REFERENCES user_profiles(id),
+  granted_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  revoked_at TIMESTAMP WITH TIME ZONE
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_matter_access_matter_user ON matter_access(matter_id, user_id);
+CREATE INDEX IF NOT EXISTS idx_matter_access_user ON matter_access(user_id);
 
 -- Create function to generate matter number
 CREATE OR REPLACE FUNCTION generate_matter_number(practice_area_code TEXT DEFAULT NULL)

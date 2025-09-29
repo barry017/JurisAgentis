@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
 
     // Create initial workflow steps
     if (workflowSteps.length > 0) {
-      const steps = workflowSteps.map((step: any, index: number) => ({
+      const steps = workflowSteps.map((step: { name: string; type: string; config?: Record<string, unknown> }, index: number) => ({
         execution_id: execution.id,
         step_number: index + 1,
         step_name: step.name,

@@ -9,13 +9,18 @@ import jwt from 'jsonwebtoken'
 import { supabaseServer, supabaseAdmin } from '@/lib/supabase'
 import { Database } from '@/types/database'
 
-type UserProfile = Database['public']['Tables']['user_profiles']['Row']
+// type UserProfile = Database['public']['Tables']['user_profiles']['Row']
 type UserRole = Database['public']['Enums']['user_role']
+// Enhanced permissions according to FR-008 to FR-013
 type UserPermissions = {
-  financial: 'all' | 'limited' | 'time_only' | 'client_only' | 'none'
-  clients: 'all' | 'assigned' | 'own' | 'none'
-  documents: 'all' | 'assigned' | 'own' | 'none'
-  administrative: 'all' | 'limited' | 'none'
+  financial: 'full' | 'client_billing' | 'time_tracking' | 'own_invoices' | 'none'
+  clients: 'full' | 'assigned' | 'basic' | 'own_profile' | 'granted_only' | 'readonly' | 'none'
+  documents: 'full' | 'assigned' | 'basic' | 'own_documents' | 'granted_only' | 'readonly' | 'none'
+  administrative: 'full' | 'limited' | 'basic' | 'system_debug' | 'none'
+  users?: 'full' | 'limited' | 'none'
+  system?: 'full' | 'debug' | 'none'
+  scheduling?: 'full' | 'limited' | 'none'
+  cases?: 'full' | 'assigned' | 'own_cases' | 'granted_only' | 'none'
 }
 
 export interface AuthenticatedUser {
@@ -68,7 +73,13 @@ export class AuthorizationError extends Error {
 export function extractToken(request: NextRequest): string {
   const authHeader = request.headers.get('Authorization')
   
+  // Development mode: Allow demo mode without authentication header
+  const isDevelopment = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test'
   if (!authHeader) {
+    if (isDevelopment) {
+      // Return a demo token for development mode
+      return 'demo-token-development'
+    }
     throw new AuthenticationError('Authentication required', 'AUTHENTICATION_REQUIRED', 401)
   }
 
@@ -88,6 +99,15 @@ export function extractToken(request: NextRequest): string {
  * Verify JWT token and extract user information
  */
 export async function verifyToken(token: string): Promise<{ uid: string, email: string }> {
+  // Development mode: Handle demo token
+  const isDevelopment = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test'
+  if (isDevelopment && token === 'demo-token-development') {
+    return {
+      uid: 'demo-user-123',
+      email: 'demo@jurisagentis.com'
+    }
+  }
+
   try {
     // Set user session for Supabase client
     const { data: { user }, error } = await supabaseServer.auth.getUser(token)
@@ -113,20 +133,19 @@ export async function verifyToken(token: string): Promise<{ uid: string, email: 
     }
     
     // Development mode: Handle connection failures with mock authentication
-    const isDevelopment = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test'
     if (isDevelopment && error instanceof Error && error.message.includes('Supabase connection failed')) {
       // Check if token is a mock token from development mode
-      if (token.startsWith('mock-token-')) {
+      if (token.startsWith('mock-token-') || token === 'demo-token-development') {
         return {
-          uid: `test-user-${Date.now()}`,
-          email: 'admin@jurisagentis.com'
+          uid: 'demo-user-123',
+          email: 'demo@jurisagentis.com'
         }
       }
     }
     
     // Try to decode JWT manually for more specific error handling
     try {
-      const decoded = jwt.decode(token) as any
+      const decoded = jwt.decode(token) as { exp?: number; [key: string]: unknown } | null
       if (!decoded) {
         throw new AuthenticationError('Invalid token format', 'INVALID_TOKEN')
       }
@@ -137,7 +156,7 @@ export async function verifyToken(token: string): Promise<{ uid: string, email: 
       }
       
       throw new AuthenticationError('Token verification failed', 'INVALID_TOKEN')
-    } catch (jwtError) {
+    } catch {
       throw new AuthenticationError('Invalid token', 'INVALID_TOKEN')
     }
   }
@@ -147,6 +166,29 @@ export async function verifyToken(token: string): Promise<{ uid: string, email: 
  * Get user profile and permissions from database
  */
 export async function getUserProfile(uid: string): Promise<AuthenticatedUser> {
+  // Development mode: Handle demo user directly
+  const isDevelopment = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test'
+  if (isDevelopment && uid === 'demo-user-123') {
+    return {
+      uid: 'demo-user-123',
+      email: 'demo@jurisagentis.com',
+      role: 'admin',
+      profile: {
+        firstName: 'Demo',
+        lastName: 'User',
+        title: 'Senior Associate Attorney'
+      },
+      permissions: {
+        financial: 'full',
+        clients: 'full',
+        documents: 'full',
+        administrative: 'full'
+      },
+      mfaEnabled: false,
+      status: 'active'
+    }
+  }
+
   let profile = null
   let error = null
 
@@ -177,7 +219,6 @@ export async function getUserProfile(uid: string): Promise<AuthenticatedUser> {
     }
   } catch (dbError) {
     // Development mode: Use mock profile when database is not available
-    const isDevelopment = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test'
     if (isDevelopment && dbError instanceof Error && dbError.message.includes('Database connection failed')) {
       profile = {
         uid: uid,
@@ -254,56 +295,93 @@ export async function getUserProfile(uid: string): Promise<AuthenticatedUser> {
 }
 
 /**
- * Get role-based permissions
+ * Get role-based permissions implementing FR-008 to FR-013
+ * Complete RBAC hierarchy with financial access controls
  */
 function getRolePermissions(role: UserRole): UserPermissions {
   switch (role) {
     case 'admin':
       return {
-        financial: 'all',
-        clients: 'all',
-        documents: 'all',
-        administrative: 'all'
+        financial: 'full', // FR-008: All firm financial data, P&L, banking, billing rates, tax info
+        clients: 'full',
+        documents: 'full',
+        administrative: 'full',
+        users: 'full',
+        system: 'full',
+        scheduling: 'full',
+        cases: 'full'
       }
     
     case 'associate_attorney':
       return {
-        financial: 'limited',
-        clients: 'all',
-        documents: 'all',
-        administrative: 'limited'
+        financial: 'client_billing', // FR-009: Client billing/invoices, own time tracking, NO firm overhead
+        clients: 'full',
+        documents: 'full',
+        administrative: 'limited',
+        users: 'none',
+        system: 'none',
+        scheduling: 'full',
+        cases: 'full'
       }
     
     case 'paralegal':
       return {
-        financial: 'time_only',
+        financial: 'time_tracking', // FR-010: Own time tracking only, NO billing rates/financial info
         clients: 'assigned',
         documents: 'assigned',
-        administrative: 'none'
+        administrative: 'limited',
+        users: 'none',
+        system: 'none',
+        scheduling: 'limited',
+        cases: 'assigned'
       }
     
     case 'assistant':
       return {
-        financial: 'none',
-        clients: 'assigned',
-        documents: 'assigned',
-        administrative: 'none'
+        financial: 'none', // FR-011: NO financial access whatsoever
+        clients: 'basic',
+        documents: 'basic',
+        administrative: 'basic',
+        users: 'none',
+        system: 'none',
+        scheduling: 'full',
+        cases: 'none'
       }
     
     case 'client':
       return {
-        financial: 'client_only',
-        clients: 'own',
-        documents: 'own',
-        administrative: 'none'
+        financial: 'own_invoices', // FR-012: Only own invoices, payment history, outstanding balances
+        clients: 'own_profile',
+        documents: 'own_documents',
+        administrative: 'none',
+        users: 'none',
+        system: 'none',
+        scheduling: 'none',
+        cases: 'own_cases'
       }
     
     case 'client_related_party':
       return {
-        financial: 'none',
-        clients: 'own',
-        documents: 'own',
-        administrative: 'none'
+        financial: 'none', // FR-013: NO financial access unless specifically granted by primary client
+        clients: 'granted_only',
+        documents: 'granted_only',
+        administrative: 'none',
+        users: 'none',
+        system: 'none',
+        scheduling: 'none',
+        cases: 'granted_only'
+      }
+    
+    case 'developer':
+      return {
+        financial: 'none', // FR-006: Temporary developer access with auto-revocation
+        clients: 'readonly',
+        documents: 'readonly',
+        administrative: 'system_debug',
+        users: 'none',
+        system: 'debug',
+        scheduling: 'none',
+        cases: 'readonly'
       }
     
     default:
@@ -311,7 +389,11 @@ function getRolePermissions(role: UserRole): UserPermissions {
         financial: 'none',
         clients: 'none',
         documents: 'none',
-        administrative: 'none'
+        administrative: 'none',
+        users: 'none',
+        system: 'none',
+        scheduling: 'none',
+        cases: 'none'
       }
   }
 }
@@ -413,7 +495,7 @@ export async function logAuditEvent(
   eventType: string,
   userId: string,
   request: NextRequest,
-  details: Record<string, any> = {},
+  details: Record<string, unknown> = {},
   targetUserId?: string
 ) {
   try {

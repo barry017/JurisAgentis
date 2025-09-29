@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { EnvelopeIcon, ArrowLeftIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 
 export default function ForgotPasswordPage() {
-  const router = useRouter()
+  const _router = useRouter()
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
@@ -36,7 +36,7 @@ export default function ForgotPasswordPage() {
       } else {
         setError(result.error?.message || 'Failed to send password reset email')
       }
-    } catch (err) {
+    } catch (_err) {
       setError('An error occurred. Please try again.')
     } finally {
       setLoading(false)
@@ -55,7 +55,7 @@ export default function ForgotPasswordPage() {
               Check Your Email
             </h2>
             <p className="mt-2 text-sm text-gray-600">
-              We've sent a password reset link to <strong>{email}</strong>
+              We&apos;ve sent a password reset link to <strong>{email}</strong>
             </p>
           </div>
 
@@ -107,7 +107,7 @@ export default function ForgotPasswordPage() {
 
             <div className="mt-6 text-center">
               <p className="text-xs text-gray-500">
-                Didn't receive the email? Check your spam folder or{' '}
+                Didn&apos;t receive the email? Check your spam folder or{' '}
                 <button
                   onClick={() => setSubmitted(false)}
                   className="font-medium text-blue-600 hover:text-blue-500"
@@ -139,7 +139,7 @@ export default function ForgotPasswordPage() {
               Forgot Your Password?
             </h2>
             <p className="mt-2 text-sm text-gray-600">
-              Enter your email address and we'll send you a link to reset your password.
+              Enter your email address and we&apos;ll send you a link to reset your password.
             </p>
           </div>
         </div>
@@ -226,7 +226,7 @@ export default function ForgotPasswordPage() {
                 <ul className="mt-2 text-sm text-blue-600 list-disc list-inside space-y-1">
                   <li>Reset links expire after 1 hour</li>
                   <li>Only the most recent reset link will work</li>
-                  <li>We'll never ask for your password via email</li>
+                  <li>We&apos;ll never ask for your password via email</li>
                 </ul>
               </div>
             </div>

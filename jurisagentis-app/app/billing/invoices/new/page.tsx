@@ -12,12 +12,9 @@ import {
   DocumentTextIcon,
   PlusIcon,
   XMarkIcon,
-  CalendarIcon,
-  CurrencyDollarIcon,
   UserGroupIcon,
   DocumentDuplicateIcon,
   CheckCircleIcon,
-  ExclamationTriangleIcon,
   InformationCircleIcon
 } from '@heroicons/react/24/outline'
 
@@ -54,7 +51,7 @@ interface LineItem {
 
 export default function NewInvoicePage() {
   // const { user } = useAuth() // Mock user for demo
-  const user = { role: 'admin' }
+  const _user = { role: 'admin' }
   const router = useRouter()
 
   // Form state
@@ -182,7 +179,7 @@ export default function NewInvoicePage() {
     setLineItems([...lineItems, newItem])
   }
 
-  const updateLineItem = (id: string, field: keyof LineItem, value: any) => {
+  const updateLineItem = (id: string, field: keyof LineItem, value: string | number) => {
     setLineItems(lineItems.map(item =>
       item.id === id ? { ...item, [field]: value } : item
     ))
@@ -320,7 +317,7 @@ export default function NewInvoicePage() {
                   </label>
                   <select
                     value={billingType}
-                    onChange={(e) => setBillingType(e.target.value as any)}
+                    onChange={(e) => setBillingType(e.target.value as 'flat_fee' | 'hourly' | 'contingency')}
                     className="input-field"
                   >
                     <option value="flat_fee">Flat Fee</option>

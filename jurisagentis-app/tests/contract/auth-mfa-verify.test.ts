@@ -19,7 +19,7 @@ describe('POST /api/auth/mfa/verify - Contract Test', () => {
         isBackupCode: false
       }
 
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -43,7 +43,7 @@ describe('POST /api/auth/mfa/verify - Contract Test', () => {
         isBackupCode: false
       }
 
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -63,7 +63,7 @@ describe('POST /api/auth/mfa/verify - Contract Test', () => {
         isBackupCode: true
       }
 
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -81,7 +81,7 @@ describe('POST /api/auth/mfa/verify - Contract Test', () => {
         isBackupCode: false
       }
 
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -105,7 +105,7 @@ describe('POST /api/auth/mfa/verify - Contract Test', () => {
         isBackupCode: false
       }
 
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -127,7 +127,7 @@ describe('POST /api/auth/mfa/verify - Contract Test', () => {
         isBackupCode: true
       }
 
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -151,7 +151,7 @@ describe('POST /api/auth/mfa/verify - Contract Test', () => {
         isBackupCode: false
       }
 
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -167,7 +167,7 @@ describe('POST /api/auth/mfa/verify - Contract Test', () => {
       // Test response structure matches OpenAPI contract
       expect(successResponse).toMatchObject({
         success: true,
-        token: expect.any(String),
+        token: expect.any(String) as string,
       })
 
       // Validate updated token is JWT format
@@ -181,7 +181,7 @@ describe('POST /api/auth/mfa/verify - Contract Test', () => {
         isBackupCode: false
       }
 
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -198,7 +198,7 @@ describe('POST /api/auth/mfa/verify - Contract Test', () => {
         error: {
           code: 'INVALID_MFA_CODE',
           message: expect.stringContaining('invalid'),
-          details: expect.any(Object),
+          details: expect.any(Object) as Record<string, unknown>,
         },
       })
     })
@@ -210,7 +210,7 @@ describe('POST /api/auth/mfa/verify - Contract Test', () => {
         isBackupCode: false
       }
 
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -232,7 +232,7 @@ describe('POST /api/auth/mfa/verify - Contract Test', () => {
         isBackupCode: false
       }
 
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -250,7 +250,7 @@ describe('POST /api/auth/mfa/verify - Contract Test', () => {
           code: 'ACCOUNT_LOCKED',
           message: expect.stringContaining('locked'),
           details: expect.objectContaining({
-            lockedUntil: expect.any(String),
+            lockedUntil: expect.any(String) as string,
           }),
         },
       })
@@ -266,7 +266,7 @@ describe('POST /api/auth/mfa/verify - Contract Test', () => {
         isBackupCode: false
       }
 
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -290,7 +290,7 @@ describe('POST /api/auth/mfa/verify - Contract Test', () => {
       // Make multiple failed attempts rapidly
       for (let i = 0; i < 6; i++) {
         requests.push(
-          fetch(`http://localhost:3000${endpoint}`, {
+          fetch(`http://localhost:3001${endpoint}`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -316,7 +316,7 @@ describe('POST /api/auth/mfa/verify - Contract Test', () => {
       const backupCode = 'a1b2c3d4'
       
       // First use of backup code should succeed
-      const firstResponse = await fetch(`http://localhost:3000${endpoint}`, {
+      const _firstResponse = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -329,7 +329,7 @@ describe('POST /api/auth/mfa/verify - Contract Test', () => {
       })
 
       // Second use of same backup code should fail
-      const secondResponse = await fetch(`http://localhost:3000${endpoint}`, {
+      const secondResponse = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -354,7 +354,7 @@ describe('POST /api/auth/mfa/verify - Contract Test', () => {
         isBackupCode: false
       }
 
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -372,7 +372,7 @@ describe('POST /api/auth/mfa/verify - Contract Test', () => {
 
   describe('HTTP Method Contract', () => {
     it('should reject GET requests', async () => {
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'GET',
         headers: {
           'Authorization': 'Bearer valid-token',
@@ -383,7 +383,7 @@ describe('POST /api/auth/mfa/verify - Contract Test', () => {
     })
 
     it('should reject PUT requests', async () => {
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -404,7 +404,7 @@ describe('POST /api/auth/mfa/verify - Contract Test', () => {
         isBackupCode: false
       }
 
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

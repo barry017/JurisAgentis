@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { PaperAirplaneIcon, InboxIcon, EyeIcon, ClockIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import ProtectedRoute from '@/components/auth/ProtectedRoute'
 
@@ -32,7 +32,7 @@ interface SendEmailForm {
   subject: string
   content: string
   template?: string
-  template_data?: Record<string, any>
+  template_data?: Record<string, string | number | boolean>
   matter_id?: string
   client_id?: string
   priority: 'low' | 'normal' | 'high' | 'urgent'
@@ -100,7 +100,7 @@ export default function EmailManagementPage() {
     { name: 'document_ready', label: 'Document Ready for Review' }
   ])
 
-  const fetchEmails = async () => {
+  const fetchEmails = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -126,11 +126,11 @@ export default function EmailManagementPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [filters])
 
   useEffect(() => {
     fetchEmails()
-  }, [filters])
+  }, [filters, fetchEmails])
 
   const handleSendEmail = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -154,7 +154,7 @@ export default function EmailManagementPage() {
         throw new Error(errorData.error?.message || 'Failed to send email')
       }
 
-      const result = await response.json()
+      const _result = await response.json()
       setSendSuccess(true)
       
       // Reset form
@@ -485,7 +485,7 @@ export default function EmailManagementPage() {
                     <select
                       required
                       value={sendForm.category}
-                      onChange={(e) => setSendForm(prev => ({ ...prev, category: e.target.value as any }))}
+                      onChange={(e) => setSendForm(prev => ({ ...prev, category: e.target.value as SendEmailForm['category'] }))}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                     >
                       {Object.entries(categoryLabels).map(([value, label]) => (
@@ -500,7 +500,7 @@ export default function EmailManagementPage() {
                     </label>
                     <select
                       value={sendForm.priority}
-                      onChange={(e) => setSendForm(prev => ({ ...prev, priority: e.target.value as any }))}
+                      onChange={(e) => setSendForm(prev => ({ ...prev, priority: e.target.value as SendEmailForm['priority'] }))}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                     >
                       <option value="low">Low</option>

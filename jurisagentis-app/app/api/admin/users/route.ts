@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
     try {
       requireRole(user, ['admin', 'associate_attorney'])
       requirePermission(user, 'administrative', ['all', 'limited'])
-    } catch (error) {
+    } catch {
       await logAuditEvent('ADMIN_USERS_ACCESS_DENIED', user.uid, request, {
         reason: 'Insufficient permissions',
         userRole: user.role

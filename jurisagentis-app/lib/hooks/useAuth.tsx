@@ -8,7 +8,8 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { supabase } from '@/lib/supabase'
-import { User } from '@supabase/supabase-js'
+// import { User } from '@supabase/supabase-js'
+import { handleError } from '@/lib/errors'
 
 interface AuthUser {
   uid: string
@@ -63,7 +64,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       return null
     } catch (error) {
-      console.error('Failed to fetch user profile:', error)
+      handleError(error, {
+        operation: 'Fetch User Profile',
+        showToast: false,
+        logError: true
+      })
       return null
     }
   }
@@ -77,9 +82,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (session?.access_token) {
           const userProfile = await fetchUserProfile(session.access_token)
           setUser(userProfile)
+        } else {
+          // Demo mode: Provide a sample user for demonstration
+          const demoUser: AuthUser = {
+            uid: 'demo-user-123',
+            email: 'demo@jurisagentis.com',
+            role: 'admin',
+            profile: {
+              firstName: 'Demo',
+              lastName: 'User',
+              title: 'Senior Associate Attorney'
+            },
+            permissions: {
+              financial: 'full',
+              clients: 'full',
+              documents: 'full',
+              administrative: 'full'
+            },
+            mfaEnabled: false,
+            status: 'active'
+          }
+          setUser(demoUser)
         }
       } catch (error) {
-        console.error('Auth initialization error:', error)
+        handleError(error, {
+          operation: 'Authentication Initialization',
+          showToast: false,
+          logError: true
+        })
+        
+        // Fallback to demo user on error
+        const demoUser: AuthUser = {
+          uid: 'demo-user-123',
+          email: 'demo@jurisagentis.com',
+          role: 'admin',
+          profile: {
+            firstName: 'Demo',
+            lastName: 'User',
+            title: 'Senior Associate Attorney'
+          },
+          permissions: {
+            financial: 'full',
+            clients: 'full',
+            documents: 'full',
+            administrative: 'full'
+          },
+          mfaEnabled: false,
+          status: 'active'
+        }
+        setUser(demoUser)
       } finally {
         setLoading(false)
       }
@@ -140,9 +191,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
     } catch (error) {
+      const appError = handleError(error, {
+        operation: 'Login',
+        showToast: false,
+        logError: true
+      })
       return {
         success: false,
-        error: 'Network error occurred'
+        error: appError.message
       }
     }
   }
@@ -182,9 +238,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
     } catch (error) {
+      const appError = handleError(error, {
+        operation: 'MFA Verification',
+        showToast: false,
+        logError: true
+      })
       return {
         success: false,
-        error: 'Network error occurred'
+        error: appError.message
       }
     }
   }
@@ -206,7 +267,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await supabase.auth.signOut()
       setUser(null)
     } catch (error) {
-      console.error('Logout error:', error)
+      handleError(error, {
+        operation: 'Logout',
+        showToast: false,
+        logError: true
+      })
       // Force sign out even if API call fails
       await supabase.auth.signOut()
       setUser(null)

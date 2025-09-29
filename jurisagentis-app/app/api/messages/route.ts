@@ -336,7 +336,7 @@ export async function PUT(request: NextRequest) {
 }
 
 // Transform database format to API format for threads
-function transformThreadDbToApi(dbThread: any): MessageThread {
+function transformThreadDbToApi(dbThread: Record<string, unknown>): MessageThread {
   return {
     id: dbThread.id,
     participants: dbThread.participants || [],
@@ -354,7 +354,7 @@ function transformThreadDbToApi(dbThread: any): MessageThread {
 }
 
 // Transform database format to API format for messages
-function transformMessageDbToApi(dbMessage: any): Message {
+function transformMessageDbToApi(dbMessage: Record<string, unknown>): Message {
   return {
     id: dbMessage.id,
     threadId: dbMessage.thread_id,

@@ -3,13 +3,10 @@
  */
 
 import { NextRequest } from 'next/server'
-import { supabaseServer, supabaseAdmin } from '@/lib/supabase'
 import { 
   createSuccessResponse, 
   createErrorResponse, 
   createMethodNotAllowedResponse,
-  parseRequestBody,
-  validateContentType,
   addCORSHeaders
 } from '@/lib/api/response'
 import { authenticate, logAuditEvent, AuthenticationError } from '@/lib/auth/middleware'
@@ -201,10 +198,8 @@ export async function GET(request: NextRequest) {
   }
 }
 
-function generateMockReport(reportType: string, filters: ReportFilter): any {
-  const currentDate = new Date()
-  const startOfYear = new Date(currentDate.getFullYear(), 0, 1)
-  const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
+function generateMockReport(reportType: string, filters: ReportFilter): FinancialReport | ProductivityReport | ClientReport | Record<string, unknown> {
+  // const currentDate = new Date() // Unused for now, will be used for date-based filtering
 
   switch (reportType) {
     case 'financial':

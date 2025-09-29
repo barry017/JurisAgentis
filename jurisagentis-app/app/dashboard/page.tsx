@@ -12,7 +12,7 @@ import {
   DocumentTextIcon, 
   UsersIcon, 
   ChartBarIcon,
-  CogIcon,
+  Cog6ToothIcon,
   ArrowRightOnRectangleIcon,
   ShieldCheckIcon,
   ClockIcon,
@@ -182,7 +182,7 @@ export default function DashboardPage() {
     },
     {
       name: 'User Management',
-      icon: CogIcon,
+      icon: Cog6ToothIcon,
       href: '/admin/users',
       description: 'Manage system users',
       available: user.role === 'admin'
@@ -260,7 +260,7 @@ export default function DashboardPage() {
             Welcome back, {user.profile.firstName}
           </h2>
           <p className="text-gray-600">
-            Here's what's happening with your legal practice today.
+            Here&apos;s what&apos;s happening with your legal practice today.
           </p>
         </div>
 
