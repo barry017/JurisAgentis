@@ -3,7 +3,7 @@
  */
 
 import { NextRequest } from 'next/server'
-import { supabaseServer, supabaseAdmin } from '@/lib/supabase'
+import { /* supabaseServer, */ supabaseAdmin } from '@/lib/supabase'
 import { 
   createSuccessResponse, 
   createErrorResponse, 
@@ -769,7 +769,7 @@ export async function POST(request: NextRequest) {
       all_day: eventData.all_day ?? false,
       timezone: eventData.timezone || 'America/New_York',
       location: eventData.location?.trim() || null,
-      location_type: eventData.location_type as any || null,
+      location_type: (eventData.location_type as 'in_person' | 'virtual' | 'hybrid' | 'court' | 'client_office' | 'law_firm') || null,
       virtual_meeting_url: eventData.virtual_meeting_url?.trim() || null,
       virtual_meeting_id: eventData.virtual_meeting_id?.trim() || null,
       room_or_courtroom: eventData.room_or_courtroom?.trim() || null,
@@ -778,8 +778,8 @@ export async function POST(request: NextRequest) {
       case_number: eventData.case_number?.trim() || null,
       judge_name: eventData.judge_name?.trim() || null,
       court_name: eventData.court_name?.trim() || null,
-      hearing_type: eventData.hearing_type as any || null,
-      deadline_type: eventData.deadline_type as any || null,
+      hearing_type: (eventData.hearing_type as 'motion' | 'trial' | 'deposition' | 'conference' | 'hearing' | 'arbitration' | 'mediation') || null,
+      deadline_type: (eventData.deadline_type as 'filing' | 'discovery' | 'response' | 'appeal' | 'payment' | 'statutory' | 'court_ordered' | 'contract') || null,
       deadline_description: eventData.deadline_description?.trim() || null,
       is_hard_deadline: eventData.is_hard_deadline ?? false,
       deadline_consequence: eventData.deadline_consequence?.trim() || null,

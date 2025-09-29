@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    let updates: any = {
+    const updates: Record<string, unknown> = {
       updated_at: new Date().toISOString()
     }
 

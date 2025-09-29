@@ -11,7 +11,6 @@ import {
   UserIcon,
   PencilSquareIcon,
   PhoneIcon,
-  EnvelopeIcon,
   MapPinIcon,
   BuildingOfficeIcon,
   ArrowLeftIcon,
@@ -130,7 +129,7 @@ export default function EditClientPage({ params }: { params: Promise<{ id: strin
         } else {
           setError(data.error?.message || 'Failed to load client')
         }
-      } catch (error) {
+      } catch (_error) {
         setError('Network error occurred')
       } finally {
         setLoadingClient(false)
@@ -162,7 +161,7 @@ export default function EditClientPage({ params }: { params: Promise<{ id: strin
         <div className="text-center">
           <ExclamationTriangleIcon className="h-12 w-12 text-red-500 mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h2>
-          <p className="text-gray-600 mb-4">You don't have permission to edit clients.</p>
+          <p className="text-gray-600 mb-4">You don&apos;t have permission to edit clients.</p>
           <button
             onClick={() => router.push('/dashboard')}
             className="btn-primary"

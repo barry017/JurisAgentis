@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { DocumentTextIcon, PlusIcon, PencilIcon, TrashIcon, EyeIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline'
+import { DocumentTextIcon, PlusIcon, PencilIcon, EyeIcon } from '@heroicons/react/24/outline'
 import ProtectedRoute from '@/components/auth/ProtectedRoute'
 
 interface EmailTemplate {
@@ -36,7 +36,7 @@ const templateCategories = [
   { value: 'follow_up', label: 'Follow Up' }
 ]
 
-const commonVariables = [
+const _commonVariables = [
   'client_name',
   'attorney_name',
   'firm_name',

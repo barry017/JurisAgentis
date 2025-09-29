@@ -4,22 +4,21 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { useRouter } from 'next/navigation'
 import { 
-  UsersIcon, 
-  PlusIcon,
-  MagnifyingGlassIcon,
-  FunnelIcon,
-  EyeIcon,
-  PencilSquareIcon,
-  TrashIcon,
-  PhoneIcon,
-  EnvelopeIcon,
-  BuildingOfficeIcon,
-  UserIcon
-} from '@heroicons/react/24/outline'
+  Users, 
+  Plus,
+  Search,
+  Eye,
+  Edit,
+  Trash2,
+  Phone,
+  Mail,
+  Building,
+  User
+} from 'lucide-react'
 
 interface Client {
   id: string
@@ -37,7 +36,7 @@ interface Client {
   updated_at: string
 }
 
-interface ClientsResponse {
+interface _ClientsResponse {
   clients: Client[]
   pagination: {
     limit: number
@@ -81,7 +80,7 @@ export default function ClientsPage() {
   }, [user, router])
 
   // Fetch clients
-  const fetchClients = async () => {
+  const fetchClients = useCallback(async () => {
     try {
       setLoadingClients(true)
       setError('')
@@ -97,24 +96,24 @@ export default function ClientsPage() {
       const data = await response.json()
 
       if (response.ok) {
-        setClients(data.clients || [])
-        setTotalClients(data.pagination?.total || 0)
+        setClients(data.data?.clients || [])
+        setTotalClients(data.data?.pagination?.total || 0)
       } else {
         setError(data.error?.message || 'Failed to load clients')
       }
-    } catch (error) {
+    } catch (_error) {
       setError('Network error occurred')
     } finally {
       setLoadingClients(false)
     }
-  }
+  }, [searchTerm, statusFilter, typeFilter, currentPage])
 
   // Load clients on mount and when filters change
   useEffect(() => {
     if (user) {
       fetchClients()
     }
-  }, [user, searchTerm, statusFilter, typeFilter, currentPage])
+  }, [user, searchTerm, statusFilter, typeFilter, currentPage, fetchClients])
 
   // Reset to first page when filters change
   useEffect(() => {
@@ -146,8 +145,8 @@ export default function ClientsPage() {
 
   const getTypeIcon = (type: string) => {
     return type === 'business' || type === 'non_profit' || type === 'government' ? 
-      <BuildingOfficeIcon className="h-4 w-4" /> : 
-      <UserIcon className="h-4 w-4" />
+      <Building className="h-4 w-4" /> : 
+      <User className="h-4 w-4" />
   }
 
   if (loading) {
@@ -174,7 +173,7 @@ export default function ClientsPage() {
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-2xl font-bold text-gray-900 flex items-center">
-                <UsersIcon className="h-8 w-8 mr-3 text-blue-600" />
+                <Users className="h-8 w-8 mr-3 text-blue-600" />
                 Clients
               </h1>
               <p className="text-gray-600 mt-1">
@@ -187,7 +186,7 @@ export default function ClientsPage() {
                 onClick={() => router.push('/clients/new')}
                 className="btn-primary flex items-center"
               >
-                <PlusIcon className="h-5 w-5 mr-2" />
+                <Plus className="h-5 w-5 mr-2" />
                 New Client
               </button>
             )}
@@ -202,7 +201,7 @@ export default function ClientsPage() {
             {/* Search */}
             <div className="md:col-span-2">
               <div className="relative">
-                <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <input
                   type="text"
                   placeholder="Search clients by name, email, or business..."
@@ -264,7 +263,7 @@ export default function ClientsPage() {
             </div>
           ) : clients.length === 0 ? (
             <div className="p-8 text-center">
-              <UsersIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-600 text-lg">No clients found</p>
               <p className="text-gray-500">
                 {searchTerm || statusFilter !== 'all' || typeFilter !== 'all' 
@@ -279,7 +278,7 @@ export default function ClientsPage() {
                   onClick={() => router.push('/clients/new')}
                   className="btn-primary mt-4"
                 >
-                  <PlusIcon className="h-5 w-5 mr-2" />
+                  <Plus className="h-5 w-5 mr-2" />
                   Add First Client
                 </button>
               )}
@@ -325,13 +324,13 @@ export default function ClientsPage() {
                         <div className="text-sm">
                           {client.email && (
                             <div className="flex items-center text-gray-600 mb-1">
-                              <EnvelopeIcon className="h-4 w-4 mr-1" />
+                              <Mail className="h-4 w-4 mr-1" />
                               <span className="truncate">{client.email}</span>
                             </div>
                           )}
                           {client.phone_primary && (
                             <div className="flex items-center text-gray-600">
-                              <PhoneIcon className="h-4 w-4 mr-1" />
+                              <Phone className="h-4 w-4 mr-1" />
                               <span>{client.phone_primary}</span>
                             </div>
                           )}
@@ -358,7 +357,7 @@ export default function ClientsPage() {
                             className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
                             title="View Client"
                           >
-                            <EyeIcon className="h-4 w-4" />
+                            <Eye className="h-4 w-4" />
                           </button>
                           
                           {canEditClients && (
@@ -367,7 +366,7 @@ export default function ClientsPage() {
                               className="p-1 text-gray-400 hover:text-green-600 transition-colors"
                               title="Edit Client"
                             >
-                              <PencilSquareIcon className="h-4 w-4" />
+                              <Edit className="h-4 w-4" />
                             </button>
                           )}
 
@@ -382,7 +381,7 @@ export default function ClientsPage() {
                               className="p-1 text-gray-400 hover:text-red-600 transition-colors"
                               title="Delete Client"
                             >
-                              <TrashIcon className="h-4 w-4" />
+                              <Trash2 className="h-4 w-4" />
                             </button>
                           )}
                         </div>

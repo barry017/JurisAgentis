@@ -83,7 +83,7 @@ export default function TemporaryAccessPage() {
   useEffect(() => {
     loadTemporaryAccess()
     loadUsers()
-  }, [statusFilter])
+  }, [statusFilter]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadTemporaryAccess = async () => {
     try {
@@ -100,7 +100,7 @@ export default function TemporaryAccessPage() {
       } else {
         setError('Failed to load temporary access records')
       }
-    } catch (err) {
+    } catch {
       setError('An error occurred while loading temporary access records')
     } finally {
       setLoading(false)
@@ -114,8 +114,8 @@ export default function TemporaryAccessPage() {
         const result = await response.json()
         setUsers(result.data?.users || [])
       }
-    } catch (err) {
-      console.error('Error loading users:', err)
+    } catch {
+      console.error('Error loading users')
     }
   }
 
@@ -150,7 +150,7 @@ export default function TemporaryAccessPage() {
       } else {
         setError(result.error?.message || 'Failed to grant temporary access')
       }
-    } catch (err) {
+    } catch {
       setError('An error occurred while granting temporary access')
     } finally {
       setGrantLoading(false)
@@ -182,7 +182,7 @@ export default function TemporaryAccessPage() {
       } else {
         setError(result.error?.message || 'Failed to revoke temporary access')
       }
-    } catch (err) {
+    } catch {
       setError('An error occurred while revoking temporary access')
     } finally {
       setRevokeLoading(false)
@@ -302,7 +302,7 @@ export default function TemporaryAccessPage() {
               ].map((tab) => (
                 <button
                   key={tab.key}
-                  onClick={() => setStatusFilter(tab.key as any)}
+                  onClick={() => setStatusFilter(tab.key as 'all' | 'active' | 'expired' | 'revoked')}
                   className={`py-2 px-1 border-b-2 font-medium text-sm ${
                     statusFilter === tab.key
                       ? 'border-blue-500 text-blue-600'
@@ -448,7 +448,7 @@ export default function TemporaryAccessPage() {
                     <select
                       required
                       value={grantForm.access_type}
-                      onChange={(e) => setGrantForm({ ...grantForm, access_type: e.target.value as any })}
+                      onChange={(e) => setGrantForm({ ...grantForm, access_type: e.target.value as 'full' | 'read_only' | 'specific_feature' })}
                       className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                     >
                       <option value="read_only">Read Only</option>

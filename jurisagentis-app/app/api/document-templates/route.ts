@@ -3,7 +3,7 @@
  */
 
 import { NextRequest } from 'next/server'
-import { supabaseServer, supabaseAdmin } from '@/lib/supabase'
+import { /* supabaseServer, */ supabaseAdmin } from '@/lib/supabase'
 import { 
   createSuccessResponse, 
   createErrorResponse, 
@@ -14,7 +14,8 @@ import {
 } from '@/lib/api/response'
 import { authenticate, logAuditEvent, AuthenticationError } from '@/lib/auth/middleware'
 
-interface DocumentTemplate {
+// Keeping interface definition for future use when templates are fetched from database
+interface _DocumentTemplate {
   id: string
   name: string
   title: string

@@ -9,10 +9,10 @@ import { supabaseServer, supabaseAdmin } from '@/lib/supabase'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params
+    const { id } = await params
 
     const { data: execution, error } = await supabaseServer
       .from('workflow_executions')
@@ -81,10 +81,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params
+    const { id } = await params
     const body = await request.json()
     
     const { action } = body
@@ -103,7 +103,7 @@ export async function PUT(
       )
     }
 
-    let updateData: any = {}
+    const updateData: { status?: string; paused_at?: string; resumed_at?: string; completed_at?: string; error?: string } = {}
     let logMessage = ''
 
     switch (action) {
@@ -227,10 +227,10 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params
+    const { id } = await params
 
     // Get execution to check status
     const { data: execution, error: fetchError } = await supabaseServer

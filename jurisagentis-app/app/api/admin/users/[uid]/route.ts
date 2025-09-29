@@ -41,9 +41,10 @@ interface UserUpdateResponse {
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { uid: string } }
+  { params }: { params: Promise<{ uid: string }> }
 ) {
   try {
+    const { uid } = await params
     // Authenticate user
     const user = await authenticate(request)
 
@@ -51,10 +52,10 @@ export async function PUT(
     try {
       requireRole(user, ['admin'])
       requirePermission(user, 'administrative', ['all'])
-    } catch (error) {
+    } catch {
       await logAuditEvent('ADMIN_USER_UPDATE_DENIED', user.uid, request, {
         reason: 'Insufficient permissions',
-        targetUid: params.uid,
+        targetUid: uid,
         userRole: user.role
       })
       return createErrorResponse(
@@ -102,12 +103,12 @@ export async function PUT(
     const { data: targetUser, error: userError } = await supabaseAdmin
       .from('user_profiles')
       .select('uid, email, role, status, first_name, last_name')
-      .eq('uid', params.uid)
+      .eq('uid', uid)
       .single()
 
     if (userError || !targetUser) {
       await logAuditEvent('ADMIN_USER_UPDATE_NOT_FOUND', user.uid, request, {
-        targetUid: params.uid
+        targetUid: uid
       })
       return createErrorResponse(
         'USER_NOT_FOUND',
@@ -117,7 +118,7 @@ export async function PUT(
     }
 
     // Prevent self-modification of critical attributes
-    if (params.uid === user.uid && body.role && body.role !== user.role) {
+    if (uid === user.uid && body.role && body.role !== user.role) {
       await logAuditEvent('ADMIN_USER_UPDATE_SELF_ROLE_CHANGE', user.uid, request, {
         attemptedRole: body.role
       })
@@ -129,7 +130,7 @@ export async function PUT(
     }
 
     // Build update object
-    const updateData: any = {
+    const updateData: Record<string, unknown> = {
       updated_at: new Date().toISOString()
     }
 
@@ -145,7 +146,7 @@ export async function PUT(
     const { data: updatedUser, error: updateError } = await supabaseAdmin
       .from('user_profiles')
       .update(updateData)
-      .eq('uid', params.uid)
+      .eq('uid', uid)
       .select('uid, role, status, updated_at')
       .single()
 
@@ -159,7 +160,7 @@ export async function PUT(
     }
 
     // Log the changes
-    const changes: any = {}
+    const changes: Record<string, { from: string; to: string }> = {}
     if (body.role && body.role !== targetUser.role) {
       changes.role = { from: targetUser.role, to: body.role }
     }
@@ -168,10 +169,10 @@ export async function PUT(
     }
 
     await logAuditEvent('ADMIN_USER_UPDATE', user.uid, request, {
-      targetUid: params.uid,
+      targetUid: uid,
       targetEmail: targetUser.email,
       changes
-    }, params.uid)
+    }, uid)
 
     const updateResponse: UserUpdateResponse = {
       success: true,

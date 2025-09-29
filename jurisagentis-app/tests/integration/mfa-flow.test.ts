@@ -27,7 +27,7 @@ jest.mock('@supabase/supabase-js', () => ({
 }))
 
 describe('MFA Flow - Integration Test', () => {
-  let supabaseClient: any
+  let supabaseClient: ReturnType<typeof createClient>
   
   beforeEach(() => {
     supabaseClient = createClient('mock-url', 'mock-key')
@@ -247,7 +247,7 @@ describe('MFA Flow - Integration Test', () => {
       const response = await verifyResult.json()
       expect(response).toMatchObject({
         success: true,
-        token: expect.any(String)
+        token: expect.any(String) as string
       })
 
       // Verify backup code was removed from available codes

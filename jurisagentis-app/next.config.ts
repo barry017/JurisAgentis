@@ -42,7 +42,11 @@ const nextConfig: NextConfig = {
   
   // Experimental features for performance
   experimental: {
-    serverComponentsExternalPackages: ['@supabase/supabase-js']
+    serverComponentsExternalPackages: ['@supabase/supabase-js'],
+    externalDir: true,
+    optimizePackageImports: ['@heroicons/react', 'lucide-react'],
+    serverMinification: true,
+    optimizeCss: true
   },
   
   // Environment variables validation
@@ -51,7 +55,7 @@ const nextConfig: NextConfig = {
   },
   
   // Webpack configuration for production
-  webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
+  webpack: (config, { buildId: _buildId, dev, isServer, defaultLoaders: _defaultLoaders, webpack: _webpack }) => {
     // Production optimizations
     if (!dev && !isServer) {
       config.optimization.splitChunks.cacheGroups = {
@@ -62,8 +66,34 @@ const nextConfig: NextConfig = {
           chunks: 'all',
           priority: 10,
           enforce: true
+        },
+        supabase: {
+          test: /[\\/]node_modules[\\/]@supabase[\\/]/,
+          name: 'supabase',
+          chunks: 'all',
+          priority: 20
+        },
+        ui: {
+          test: /[\\/]node_modules[\\/](@radix-ui|@heroicons|lucide-react)[\\/]/,
+          name: 'ui',
+          chunks: 'all',
+          priority: 15
         }
       }
+      
+      // Enable tree shaking for production
+      config.optimization.usedExports = true;
+      config.optimization.sideEffects = false;
+    }
+    
+    // Bundle analyzer (only in development)
+    if (dev && process.env.ANALYZE === 'true') {
+      const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
+      config.plugins.push(new BundleAnalyzerPlugin({
+        analyzerMode: 'server',
+        analyzerPort: 8888,
+        openAnalyzer: true
+      }));
     }
     
     return config

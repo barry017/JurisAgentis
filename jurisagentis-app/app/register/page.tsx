@@ -44,7 +44,7 @@ interface RegistrationFormData {
 }
 
 export default function RegisterPage() {
-  const router = useRouter()
+  const _router = useRouter()
   
   const [formData, setFormData] = useState<RegistrationFormData>({
     firstName: '',

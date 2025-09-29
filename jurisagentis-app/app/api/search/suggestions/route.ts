@@ -11,7 +11,7 @@ interface SearchSuggestion {
   text: string
   type: 'query' | 'client' | 'matter' | 'document' | 'recent'
   category?: string
-  metadata?: Record<string, any>
+  metadata?: Record<string, Record<string, unknown>>
 }
 
 export async function GET(request: NextRequest) {

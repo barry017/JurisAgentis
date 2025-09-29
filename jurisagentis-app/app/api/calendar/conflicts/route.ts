@@ -53,7 +53,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Group conflicts by attendee
-    const conflictsByAttendee = conflicts?.reduce((acc: any, conflict: any) => {
+    const conflictsByAttendee = conflicts?.reduce((acc: Record<string, unknown[]>, conflict: { 
+      conflicted_attendee_id: string;
+      conflict_event_id: string;
+      conflict_title: string;
+      conflict_start: string;
+      conflict_end: string;
+    }) => {
       const attendeeId = conflict.conflicted_attendee_id
       if (!acc[attendeeId]) {
         acc[attendeeId] = []

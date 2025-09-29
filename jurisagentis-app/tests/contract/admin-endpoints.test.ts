@@ -15,7 +15,7 @@ describe('Admin Endpoints - Contract Test', () => {
 
     describe('Authentication and Authorization', () => {
       it('should reject requests without authentication token', async () => {
-        const response = await fetch(`http://localhost:3000${endpoint}`, {
+        const response = await fetch(`http://localhost:3001${endpoint}`, {
           method: 'GET',
         })
 
@@ -29,7 +29,7 @@ describe('Admin Endpoints - Contract Test', () => {
       it('should reject requests from non-admin users', async () => {
         const clientToken = 'valid-jwt-token-client-role'
         
-        const response = await fetch(`http://localhost:3000${endpoint}`, {
+        const response = await fetch(`http://localhost:3001${endpoint}`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${clientToken}`,
@@ -45,7 +45,7 @@ describe('Admin Endpoints - Contract Test', () => {
       it('should accept requests from admin users', async () => {
         const adminToken = 'valid-jwt-token-admin-role'
         
-        const response = await fetch(`http://localhost:3000${endpoint}`, {
+        const response = await fetch(`http://localhost:3001${endpoint}`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${adminToken}`,
@@ -60,7 +60,7 @@ describe('Admin Endpoints - Contract Test', () => {
       it('should return paginated users list', async () => {
         const adminToken = 'valid-jwt-token-admin-role'
         
-        const response = await fetch(`http://localhost:3000${endpoint}`, {
+        const response = await fetch(`http://localhost:3001${endpoint}`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${adminToken}`,
@@ -75,17 +75,17 @@ describe('Admin Endpoints - Contract Test', () => {
           success: true,
           users: expect.arrayContaining([
             expect.objectContaining({
-              uid: expect.any(String),
-              email: expect.any(String),
+              uid: expect.any(String) as string,
+              email: expect.any(String) as string,
               role: expect.stringMatching(/^(admin|associate_attorney|paralegal|assistant|client|client_related_party)$/),
               profile: expect.objectContaining({
-                firstName: expect.any(String),
-                lastName: expect.any(String),
+                firstName: expect.any(String) as string,
+                lastName: expect.any(String) as string,
               }),
               status: expect.stringMatching(/^(active|inactive|suspended)$/),
-              mfaEnabled: expect.any(Boolean),
-              lastLogin: expect.any(String),
-              createdAt: expect.any(String),
+              mfaEnabled: expect.any(Boolean) as boolean,
+              lastLogin: expect.any(String) as string,
+              createdAt: expect.any(String) as string,
             })
           ]),
           pagination: expect.objectContaining({
@@ -100,7 +100,7 @@ describe('Admin Endpoints - Contract Test', () => {
       it('should handle pagination parameters', async () => {
         const adminToken = 'valid-jwt-token-admin-role'
         
-        const response = await fetch(`http://localhost:3000${endpoint}?limit=10&offset=0`, {
+        const response = await fetch(`http://localhost:3001${endpoint}?limit=10&offset=0`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${adminToken}`,
@@ -118,7 +118,7 @@ describe('Admin Endpoints - Contract Test', () => {
       it('should handle role filtering', async () => {
         const adminToken = 'valid-jwt-token-admin-role'
         
-        const response = await fetch(`http://localhost:3000${endpoint}?role=client`, {
+        const response = await fetch(`http://localhost:3001${endpoint}?role=client`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${adminToken}`,
@@ -128,7 +128,7 @@ describe('Admin Endpoints - Contract Test', () => {
         expect(response.status).toBe(200)
         
         const successResponse = await response.json()
-        successResponse.users.forEach((user: any) => {
+        successResponse.users.forEach((user: unknown) => {
           expect(user.role).toBe('client')
         })
       })
@@ -136,7 +136,7 @@ describe('Admin Endpoints - Contract Test', () => {
       it('should handle status filtering', async () => {
         const adminToken = 'valid-jwt-token-admin-role'
         
-        const response = await fetch(`http://localhost:3000${endpoint}?status=active`, {
+        const response = await fetch(`http://localhost:3001${endpoint}?status=active`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${adminToken}`,
@@ -146,7 +146,7 @@ describe('Admin Endpoints - Contract Test', () => {
         expect(response.status).toBe(200)
         
         const successResponse = await response.json()
-        successResponse.users.forEach((user: any) => {
+        successResponse.users.forEach((user: unknown) => {
           expect(user.status).toBe('active')
         })
       })
@@ -161,7 +161,7 @@ describe('Admin Endpoints - Contract Test', () => {
         const uid = 'test-user-id'
         const requestBody = { role: 'client' }
         
-        const response = await fetch(`http://localhost:3000${getEndpoint(uid)}`, {
+        const response = await fetch(`http://localhost:3001${getEndpoint(uid)}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -180,7 +180,7 @@ describe('Admin Endpoints - Contract Test', () => {
         const uid = 'test-user-id'
         const requestBody = { role: 'admin' }
         
-        const response = await fetch(`http://localhost:3000${getEndpoint(uid)}`, {
+        const response = await fetch(`http://localhost:3001${getEndpoint(uid)}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -205,7 +205,7 @@ describe('Admin Endpoints - Contract Test', () => {
           status: 'active'
         }
         
-        const response = await fetch(`http://localhost:3000${getEndpoint(uid)}`, {
+        const response = await fetch(`http://localhost:3001${getEndpoint(uid)}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -222,7 +222,7 @@ describe('Admin Endpoints - Contract Test', () => {
         const uid = 'valid-user-id'
         const requestBody = { role: 'invalid-role' }
         
-        const response = await fetch(`http://localhost:3000${getEndpoint(uid)}`, {
+        const response = await fetch(`http://localhost:3001${getEndpoint(uid)}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -242,7 +242,7 @@ describe('Admin Endpoints - Contract Test', () => {
         const uid = 'valid-user-id'
         const requestBody = { status: 'invalid-status' }
         
-        const response = await fetch(`http://localhost:3000${getEndpoint(uid)}`, {
+        const response = await fetch(`http://localhost:3001${getEndpoint(uid)}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -262,7 +262,7 @@ describe('Admin Endpoints - Contract Test', () => {
         const uid = 'non-existent-user-id'
         const requestBody = { role: 'client' }
         
-        const response = await fetch(`http://localhost:3000${getEndpoint(uid)}`, {
+        const response = await fetch(`http://localhost:3001${getEndpoint(uid)}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -287,7 +287,7 @@ describe('Admin Endpoints - Contract Test', () => {
           status: 'active'
         }
         
-        const response = await fetch(`http://localhost:3000${getEndpoint(uid)}`, {
+        const response = await fetch(`http://localhost:3001${getEndpoint(uid)}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -306,7 +306,7 @@ describe('Admin Endpoints - Contract Test', () => {
             uid: uid,
             role: 'associate_attorney',
             status: 'active',
-            updatedAt: expect.any(String),
+            updatedAt: expect.any(String) as string,
           }),
           message: 'User updated successfully',
         })
@@ -326,7 +326,7 @@ describe('Admin Endpoints - Contract Test', () => {
           justification: 'Emergency access needed'
         }
         
-        const response = await fetch(`http://localhost:3000${getEndpoint(uid)}`, {
+        const response = await fetch(`http://localhost:3001${getEndpoint(uid)}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -349,7 +349,7 @@ describe('Admin Endpoints - Contract Test', () => {
           justification: 'Emergency access needed'
         }
         
-        const response = await fetch(`http://localhost:3000${getEndpoint(uid)}`, {
+        const response = await fetch(`http://localhost:3001${getEndpoint(uid)}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -375,7 +375,7 @@ describe('Admin Endpoints - Contract Test', () => {
           justification: 'Client requested emergency financial review'
         }
         
-        const response = await fetch(`http://localhost:3000${getEndpoint(uid)}`, {
+        const response = await fetch(`http://localhost:3001${getEndpoint(uid)}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -395,7 +395,7 @@ describe('Admin Endpoints - Contract Test', () => {
           expiresInHours: 24
         }
         
-        const response = await fetch(`http://localhost:3000${getEndpoint(uid)}`, {
+        const response = await fetch(`http://localhost:3001${getEndpoint(uid)}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -420,7 +420,7 @@ describe('Admin Endpoints - Contract Test', () => {
           justification: 'Long term access'
         }
         
-        const response = await fetch(`http://localhost:3000${getEndpoint(uid)}`, {
+        const response = await fetch(`http://localhost:3001${getEndpoint(uid)}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -445,7 +445,7 @@ describe('Admin Endpoints - Contract Test', () => {
           justification: 'Test access'
         }
         
-        const response = await fetch(`http://localhost:3000${getEndpoint(uid)}`, {
+        const response = await fetch(`http://localhost:3001${getEndpoint(uid)}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -471,7 +471,7 @@ describe('Admin Endpoints - Contract Test', () => {
           justification: 'Emergency financial review required'
         }
         
-        const response = await fetch(`http://localhost:3000${getEndpoint(uid)}`, {
+        const response = await fetch(`http://localhost:3001${getEndpoint(uid)}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -487,12 +487,12 @@ describe('Admin Endpoints - Contract Test', () => {
         expect(successResponse).toMatchObject({
           success: true,
           temporaryAccess: expect.objectContaining({
-            id: expect.any(String),
+            id: expect.any(String) as string,
             uid: uid,
             scope: 'financial',
-            grantedBy: expect.any(String),
-            grantedAt: expect.any(String),
-            expiresAt: expect.any(String),
+            grantedBy: expect.any(String) as string,
+            grantedAt: expect.any(String) as string,
+            expiresAt: expect.any(String) as string,
             justification: 'Emergency financial review required',
             active: true,
           }),
@@ -511,7 +511,7 @@ describe('Admin Endpoints - Contract Test', () => {
         const uid = 'test-user-id'
         const accessId = 'test-access-id'
         
-        const response = await fetch(`http://localhost:3000${getEndpoint(uid, accessId)}`, {
+        const response = await fetch(`http://localhost:3001${getEndpoint(uid, accessId)}`, {
           method: 'DELETE',
         })
 
@@ -526,7 +526,7 @@ describe('Admin Endpoints - Contract Test', () => {
         const uid = 'test-user-id'
         const accessId = 'test-access-id'
         
-        const response = await fetch(`http://localhost:3000${getEndpoint(uid, accessId)}`, {
+        const response = await fetch(`http://localhost:3001${getEndpoint(uid, accessId)}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${paralegalToken}`,
@@ -546,7 +546,7 @@ describe('Admin Endpoints - Contract Test', () => {
         const uid = 'valid-user-id'
         const accessId = 'valid-access-id'
         
-        const response = await fetch(`http://localhost:3000${getEndpoint(uid, accessId)}`, {
+        const response = await fetch(`http://localhost:3001${getEndpoint(uid, accessId)}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${adminToken}`,
@@ -561,7 +561,7 @@ describe('Admin Endpoints - Contract Test', () => {
         const uid = 'valid-user-id'
         const accessId = 'non-existent-access-id'
         
-        const response = await fetch(`http://localhost:3000${getEndpoint(uid, accessId)}`, {
+        const response = await fetch(`http://localhost:3001${getEndpoint(uid, accessId)}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${adminToken}`,
@@ -581,7 +581,7 @@ describe('Admin Endpoints - Contract Test', () => {
         const uid = 'valid-user-id'
         const accessId = 'valid-access-id'
         
-        const response = await fetch(`http://localhost:3000${getEndpoint(uid, accessId)}`, {
+        const response = await fetch(`http://localhost:3001${getEndpoint(uid, accessId)}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${adminToken}`,
@@ -605,7 +605,7 @@ describe('Admin Endpoints - Contract Test', () => {
     it('should include security headers in all admin responses', async () => {
       const adminToken = 'valid-jwt-token-admin-role'
       
-      const response = await fetch(`http://localhost:3000/api/admin/users`, {
+      const response = await fetch(`http://localhost:3001/api/admin/users`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${adminToken}`,
@@ -625,7 +625,7 @@ describe('Admin Endpoints - Contract Test', () => {
       // Make multiple rapid requests
       for (let i = 0; i < 50; i++) {
         requests.push(
-          fetch(`http://localhost:3000/api/admin/users`, {
+          fetch(`http://localhost:3001/api/admin/users`, {
             method: 'GET',
             headers: {
               'Authorization': `Bearer ${adminToken}`,
@@ -644,7 +644,7 @@ describe('Admin Endpoints - Contract Test', () => {
     it('should log all admin actions for audit trail', async () => {
       const adminToken = 'valid-jwt-token-admin-role'
       
-      const response = await fetch(`http://localhost:3000/api/admin/users`, {
+      const response = await fetch(`http://localhost:3001/api/admin/users`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${adminToken}`,

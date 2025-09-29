@@ -3,7 +3,7 @@
  */
 
 import { NextRequest } from 'next/server'
-import { supabaseServer, supabaseAdmin } from '@/lib/supabase'
+import { /* supabaseServer, */ supabaseAdmin } from '@/lib/supabase'
 import { 
   createSuccessResponse, 
   createErrorResponse, 
@@ -56,7 +56,7 @@ interface CreateMatterRequest {
   keywords?: string[]
   internal_notes?: string
   client_notes?: string
-  custom_fields?: any
+  custom_fields?: Record<string, unknown>
 }
 
 export async function GET(request: NextRequest) {

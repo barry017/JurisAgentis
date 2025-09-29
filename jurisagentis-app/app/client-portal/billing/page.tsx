@@ -6,7 +6,7 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { 
   CreditCardIcon,
@@ -14,7 +14,6 @@ import {
   DocumentTextIcon,
   ArrowDownTrayIcon,
   EyeIcon,
-  CalendarIcon,
   ExclamationTriangleIcon,
   CheckCircleIcon,
   ClockIcon,
@@ -22,7 +21,6 @@ import {
   ShieldCheckIcon,
   ChartBarIcon,
   CurrencyDollarIcon,
-  ReceiptPercentIcon,
   TruckIcon,
   PhoneIcon
 } from '@heroicons/react/24/outline'
@@ -181,13 +179,12 @@ const mockBillingSummary = {
 
 export default function ClientBillingPage() {
   const router = useRouter()
-  const [invoices, setInvoices] = useState<Invoice[]>(mockInvoices)
-  const [payments, setPayments] = useState<Payment[]>(mockPayments)
-  const [summary, setSummary] = useState(mockBillingSummary)
-  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
-  const [showInvoiceModal, setShowInvoiceModal] = useState(false)
+  const [invoices] = useState<Invoice[]>(mockInvoices)
+  const [payments] = useState<Payment[]>(mockPayments)
+  const [summary] = useState(mockBillingSummary)
+  const [_selectedInvoice, _setSelectedInvoice] = useState<Invoice | null>(null)
+  const [_showInvoiceModal, _setShowInvoiceModal] = useState(false)
   const [activeTab, setActiveTab] = useState<'overview' | 'invoices' | 'payments'>('overview')
-  const [loading, setLoading] = useState(false)
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {

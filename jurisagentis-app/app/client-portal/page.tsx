@@ -6,7 +6,7 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { 
   DocumentTextIcon,
@@ -17,13 +17,8 @@ import {
   UserCircleIcon,
   BellIcon,
   ClockIcon,
-  CheckCircleIcon,
-  ExclamationTriangleIcon,
   EyeIcon,
-  ArrowDownTrayIcon,
-  PaperClipIcon,
-  FolderIcon,
-  MagnifyingGlassIcon
+  ArrowDownTrayIcon
 } from '@heroicons/react/24/outline'
 
 // Mock client data - would come from API
@@ -89,8 +84,7 @@ const mockClient = {
 
 export default function ClientPortalPage() {
   const router = useRouter()
-  const [client, setClient] = useState(mockClient)
-  const [loading, setLoading] = useState(false)
+  const [client] = useState(mockClient)
 
   const getStatusBadge = (status: string) => {
     const styles = {

@@ -39,7 +39,7 @@ jest.mock('@supabase/supabase-js', () => ({
 }))
 
 describe('Admin User Management - Integration Test', () => {
-  let supabaseClient: any
+  let supabaseClient: ReturnType<typeof createClient>
   
   beforeEach(() => {
     supabaseClient = createClient('mock-url', 'mock-key')
@@ -164,7 +164,7 @@ describe('Admin User Management - Integration Test', () => {
       expect(usersResult.status).toBe(200)
       
       const response = await usersResult.json()
-      response.users.forEach((user: any) => {
+      response.users.forEach((user: { role: string }) => {
         expect(user.role).toBe('client')
       })
 
@@ -204,7 +204,7 @@ describe('Admin User Management - Integration Test', () => {
       expect(usersResult.status).toBe(200)
       
       const response = await usersResult.json()
-      response.users.forEach((user: any) => {
+      response.users.forEach((user: { status: string }) => {
         expect(user.status).toBe('active')
       })
     })
@@ -635,10 +635,10 @@ describe('Admin User Management - Integration Test', () => {
       expect(auditInsert).toHaveBeenCalledWith(
         expect.objectContaining({
           event_type: 'ADMIN_USER_UPDATE',
-          user_id: expect.any(String),
+          user_id: expect.any(String) as string,
           target_user_id: targetUid,
           details: expect.objectContaining({
-            changes: expect.any(Object)
+            changes: expect.any(Object) as Record<string, unknown>
           })
         })
       )

@@ -29,7 +29,7 @@ jest.mock('@supabase/supabase-js', () => ({
 }))
 
 describe('Authentication Flow - Integration Test', () => {
-  let supabaseClient: any
+  let supabaseClient: ReturnType<typeof createClient>
   
   beforeEach(() => {
     supabaseClient = createClient('mock-url', 'mock-key')
@@ -177,12 +177,12 @@ describe('Authentication Flow - Integration Test', () => {
       const response = await loginResult.json()
       expect(response).toMatchObject({
         success: true,
-        token: expect.any(String),
+        token: expect.any(String) as string as string,
         user: expect.objectContaining({
           email: testEmail,
           role: 'admin'
         }),
-        permissions: expect.any(Object)
+        permissions: expect.any(Object) as Record<string, unknown> as Record<string, unknown>
       })
 
       // Verify session was created in database
@@ -224,7 +224,7 @@ describe('Authentication Flow - Integration Test', () => {
       expect(loginResponse).toMatchObject({
         success: true,
         requiresMFA: true,
-        tempToken: expect.any(String)
+        tempToken: expect.any(String) as string as string
       })
 
       // Now complete MFA verification
@@ -245,7 +245,7 @@ describe('Authentication Flow - Integration Test', () => {
       const mfaResponse = await mfaResult.json()
       expect(mfaResponse).toMatchObject({
         success: true,
-        token: expect.any(String)
+        token: expect.any(String) as string as string
       })
     })
   })
@@ -297,7 +297,7 @@ describe('Authentication Flow - Integration Test', () => {
           expect.objectContaining({
             sessionId: 'session-1',
             current: true,
-            deviceInfo: expect.any(Object)
+            deviceInfo: expect.any(Object) as Record<string, unknown> as Record<string, unknown>
           })
         ])
       })
@@ -561,8 +561,8 @@ describe('Authentication Flow - Integration Test', () => {
       expect(auditInsert).toHaveBeenCalledWith(
         expect.objectContaining({
           event_type: 'AUTH_LOGIN_SUCCESS',
-          user_id: expect.any(String),
-          details: expect.any(Object)
+          user_id: expect.any(String) as string as string,
+          details: expect.any(Object) as Record<string, unknown> as Record<string, unknown>
         })
       )
     })

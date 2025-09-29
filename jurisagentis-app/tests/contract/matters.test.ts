@@ -4,10 +4,9 @@
  * Tests the matters API endpoints (/api/matters)
  */
 
-import { NextRequest } from 'next/server'
 
 describe('Matters API - Contract Tests', () => {
-  const baseUrl = 'http://localhost:3000'
+  const baseUrl = 'http://localhost:3001'
   let validToken: string
 
   beforeAll(async () => {
@@ -106,7 +105,7 @@ describe('Matters API - Contract Tests', () => {
       expect(data.success).toBe(true)
       
       // All returned matters should have active status
-      data.data.matters.forEach((matter: any) => {
+      data.data.matters.forEach((matter: unknown) => {
         expect(matter.status).toBe('active')
       })
     })
@@ -124,7 +123,7 @@ describe('Matters API - Contract Tests', () => {
       expect(data.success).toBe(true)
       
       // All returned matters should have estate_planning practice area
-      data.data.matters.forEach((matter: any) => {
+      data.data.matters.forEach((matter: unknown) => {
         expect(matter.practice_area).toBe('estate_planning')
       })
     })
@@ -150,7 +149,7 @@ describe('Matters API - Contract Tests', () => {
         
         // Results should contain matters matching the search term
         if (data.data.matters.length > 0) {
-          const hasMatch = data.data.matters.some((matter: any) => 
+          const hasMatch = data.data.matters.some((matter: unknown) => 
             matter.matter_number.toLowerCase().includes(test.term.toLowerCase()) ||
             matter.title.toLowerCase().includes(test.term.toLowerCase()) ||
             matter.client.first_name?.toLowerCase().includes(test.term.toLowerCase()) ||

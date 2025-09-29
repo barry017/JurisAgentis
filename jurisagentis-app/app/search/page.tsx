@@ -21,14 +21,11 @@ import {
   BriefcaseIcon,
   TagIcon,
   ArrowRightIcon,
-  XMarkIcon,
-  AdjustmentsHorizontalIcon,
   EyeIcon,
   ArrowDownTrayIcon,
   ShareIcon,
   BookmarkIcon,
   StarIcon,
-  ChevronRightIcon,
   LightBulbIcon,
   CommandLineIcon
 } from '@heroicons/react/24/outline'
@@ -44,7 +41,7 @@ interface SearchResult {
   matchedFields: string[]
   preview: string
   metadata: {
-    [key: string]: any
+    [key: string]: string | number | boolean
   }
   lastModified: string
   createdBy?: string
@@ -262,68 +259,68 @@ export default function SearchPage() {
 
   // Perform search when query changes
   useEffect(() => {
+    const search = async (searchQuery: string) => {
+      setIsSearching(true)
+      
+      try {
+        // Call the search API
+        const response = await fetch('/api/search', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            query: searchQuery,
+            filters,
+            limit: 20,
+            offset: 0
+          })
+        })
+        
+        if (response.ok) {
+          const data = await response.json()
+          setResults(data.results || [])
+        } else {
+          console.error('Search API error:', response.statusText)
+          // Fallback to mock data
+          setResults(mockSearchResults.filter(result => 
+            result.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            result.description.toLowerCase().includes(searchQuery.toLowerCase())
+          ))
+        }
+        
+        // Update search history
+        if (searchQuery.trim() && !searchHistory.includes(searchQuery)) {
+          setSearchHistory(prev => [searchQuery, ...prev.slice(0, 9)]) // Keep last 10
+        }
+        
+      } catch (error) {
+        console.error('Search error:', error)
+        // Fallback to mock data
+        setResults(mockSearchResults.filter(result => 
+          result.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          result.description.toLowerCase().includes(searchQuery.toLowerCase())
+        ))
+      } finally {
+        setIsSearching(false)
+      }
+    }
+
     if (query.trim()) {
-      performSearch(query)
+      search(query)
     } else {
       setResults([])
     }
-  }, [query, filters])
+  }, [query, filters, searchHistory])
 
   // Initial search from URL params
   useEffect(() => {
     const initialQuery = searchParams?.get('q')
     if (initialQuery) {
       setQuery(initialQuery)
-      performSearch(initialQuery)
     }
   }, [searchParams])
 
-  const performSearch = async (searchQuery: string) => {
-    setIsSearching(true)
-    
-    try {
-      // Call the search API
-      const response = await fetch('/api/search', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          query: searchQuery,
-          filters,
-          limit: 20,
-          offset: 0
-        })
-      })
-      
-      if (response.ok) {
-        const data = await response.json()
-        setResults(data.results || [])
-      } else {
-        console.error('Search API error:', response.statusText)
-        // Fallback to mock data
-        setResults(mockSearchResults.filter(result => 
-          result.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          result.description.toLowerCase().includes(searchQuery.toLowerCase())
-        ))
-      }
-      
-      // Update search history
-      if (searchQuery.trim() && !searchHistory.includes(searchQuery)) {
-        setSearchHistory(prev => [searchQuery, ...prev.slice(0, 9)]) // Keep last 10
-      }
-      
-    } catch (error) {
-      console.error('Search error:', error)
-      // Fallback to mock data
-      setResults(mockSearchResults.filter(result => 
-        result.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        result.description.toLowerCase().includes(searchQuery.toLowerCase())
-      ))
-    } finally {
-      setIsSearching(false)
-    }
-  }
 
   const getTypeIcon = (type: string) => {
     const icons = {
@@ -385,7 +382,6 @@ export default function SearchPage() {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (query.trim()) {
-      performSearch(query)
       setShowSuggestions(false)
     }
   }
@@ -421,7 +417,7 @@ export default function SearchPage() {
           const response = await fetch(`/api/search/suggestions?q=${encodeURIComponent(query)}&limit=5`)
           if (response.ok) {
             const data = await response.json()
-            setApiSuggestions(data.suggestions?.map((s: any) => s.text) || [])
+            setApiSuggestions(data.suggestions?.map((s: { text: string }) => s.text) || [])
           }
         } catch (error) {
           console.error('Suggestions API error:', error)
@@ -510,7 +506,6 @@ export default function SearchPage() {
                         onClick={() => {
                           setQuery(suggestion)
                           setShowSuggestions(false)
-                          performSearch(suggestion)
                         }}
                         className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center ${
                           index === selectedSuggestion ? 'bg-blue-50' : ''
@@ -581,7 +576,7 @@ export default function SearchPage() {
                       <h4 className="text-sm font-medium text-gray-900 mb-3">Date Range</h4>
                       <select
                         value={filters.dateRange}
-                        onChange={(e) => setFilters(prev => ({ ...prev, dateRange: e.target.value as any }))}
+                        onChange={(e) => setFilters(prev => ({ ...prev, dateRange: e.target.value as 'all' | 'today' | 'week' | 'month' | 'quarter' | 'year' | 'custom' }))}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                       >
                         <option value="all">All Time</option>
@@ -626,7 +621,7 @@ export default function SearchPage() {
                         value={`${filters.sortBy}-${filters.sortOrder}`}
                         onChange={(e) => {
                           const [sortBy, sortOrder] = e.target.value.split('-')
-                          setFilters(prev => ({ ...prev, sortBy: sortBy as any, sortOrder: sortOrder as any }))
+                          setFilters(prev => ({ ...prev, sortBy: sortBy as 'relevance' | 'date' | 'title' | 'type', sortOrder: sortOrder as 'asc' | 'desc' }))
                         }}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                       >
@@ -649,7 +644,7 @@ export default function SearchPage() {
                 <div className="mb-6">
                   <div className="flex items-center justify-between">
                     <h2 className="text-lg font-semibold text-gray-900">
-                      {results.length} result{results.length !== 1 ? 's' : ''} for "{query}"
+                      {results.length} result{results.length !== 1 ? 's' : ''} for &quot;{query}&quot;
                     </h2>
                     {results.length > 0 && (
                       <div className="text-sm text-gray-500">
@@ -801,7 +796,7 @@ export default function SearchPage() {
                   <MagnifyingGlassIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No results found</h3>
                   <p className="text-gray-600 mb-6">
-                    Try adjusting your search terms or filters to find what you're looking for.
+                    Try adjusting your search terms or filters to find what you&apos;re looking for.
                   </p>
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-gray-700">Try searching for:</p>

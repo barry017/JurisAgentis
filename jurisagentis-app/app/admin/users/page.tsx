@@ -9,6 +9,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
 import { 
   UsersIcon,
   PencilIcon,
@@ -80,7 +81,7 @@ export default function AdminUsersPage() {
         } else {
           setError('Failed to load users')
         }
-      } catch (err) {
+      } catch {
         setError('Network error occurred')
       } finally {
         setLoadingUsers(false)
@@ -94,8 +95,8 @@ export default function AdminUsersPage() {
 
   // Get auth token
   const getToken = async () => {
-    // In production, get from Supabase session
-    return 'mock-token'
+    const { data: { session } } = await supabase.auth.getSession()
+    return session?.access_token
   }
 
   // Filter users based on search and filters
@@ -145,7 +146,7 @@ export default function AdminUsersPage() {
       } else {
         setError('Failed to update user role')
       }
-    } catch (err) {
+    } catch {
       setError('Network error occurred')
     }
   }
@@ -170,7 +171,7 @@ export default function AdminUsersPage() {
       } else {
         setError('Failed to update user status')
       }
-    } catch (err) {
+    } catch {
       setError('Network error occurred')
     }
   }

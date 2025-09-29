@@ -5,7 +5,7 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { 
   CheckCircleIcon,
@@ -19,7 +19,6 @@ import {
 type VerificationStatus = 'verifying' | 'success' | 'error' | 'expired' | 'already_verified'
 
 function VerifyEmailContent() {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const token = searchParams?.get('token')
   const error = searchParams?.get('error')
@@ -127,7 +126,7 @@ function VerifyEmailContent() {
       await new Promise(resolve => setTimeout(resolve, 2000))
       setResendSuccess(true)
       setMessage('A new verification email has been sent to your email address.')
-    } catch (error) {
+    } catch {
       setMessage('An error occurred while resending the verification email')
     } finally {
       setResendLoading(false)
@@ -152,7 +151,7 @@ function VerifyEmailContent() {
                 <InformationCircleIcon className="h-5 w-5 text-blue-400" />
                 <div className="ml-3">
                   <p className="text-sm text-blue-700">
-                    This process usually takes just a few seconds. If this page doesn't update automatically, please refresh your browser.
+                    This process usually takes just a few seconds. If this page doesn&apos;t update automatically, please refresh your browser.
                   </p>
                 </div>
               </div>
@@ -191,7 +190,7 @@ function VerifyEmailContent() {
                     <h3 className="text-sm font-medium text-blue-800 mb-2">What happens next?</h3>
                     <ul className="text-sm text-blue-700 space-y-1">
                       <li>• An administrator will review your registration</li>
-                      <li>• You'll receive an email notification once approved</li>
+                      <li>• You&apos;ll receive an email notification once approved</li>
                       <li>• You can then log in and access the system</li>
                       <li>• This process typically takes 1-2 business days</li>
                     </ul>
@@ -227,7 +226,7 @@ function VerifyEmailContent() {
                 This email address has already been verified. Your registration is pending admin approval.
               </p>
               <p>
-                If you haven't heard back from us within 2-3 business days, please contact support.
+                If you haven&apos;t heard back from us within 2-3 business days, please contact support.
               </p>
             </div>
             <div className="mt-6 space-y-3">
@@ -378,7 +377,7 @@ function VerifyEmailContent() {
                     <h3 className="text-sm font-medium text-yellow-800 mb-2">Common Solutions:</h3>
                     <ul className="text-sm text-yellow-700 space-y-1">
                       <li>• Check if the verification link is complete and not broken</li>
-                      <li>• Ensure you're using the most recent verification email</li>
+                      <li>• Ensure you&apos;re using the most recent verification email</li>
                       <li>• Try requesting a new verification email below</li>
                       <li>• Contact support if the issue persists</li>
                     </ul>

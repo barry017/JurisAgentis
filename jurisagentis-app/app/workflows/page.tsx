@@ -8,7 +8,7 @@ import { useState, useEffect } from 'react'
 // import { useAuth } from '@/lib/hooks/useAuth'
 import { useRouter } from 'next/navigation'
 import { 
-  CogIcon,
+  Cog6ToothIcon,
   PlusIcon,
   PlayIcon,
   PauseIcon,
@@ -21,9 +21,7 @@ import {
   EyeIcon,
   PencilSquareIcon,
   DocumentDuplicateIcon,
-  TrashIcon,
-  ArrowPathIcon,
-  FunnelIcon
+  ArrowPathIcon
 } from '@heroicons/react/24/outline'
 
 interface WorkflowTemplate {
@@ -80,22 +78,17 @@ export default function WorkflowsPage() {
   const [activeTab, setActiveTab] = useState<'templates' | 'executions'>('templates')
   const [templates, setTemplates] = useState<WorkflowTemplate[]>([])
   const [executions, setExecutions] = useState<WorkflowExecution[]>([])
-  const [loading, setLoading] = useState(true)
-  const [selectedItems, setSelectedItems] = useState<string[]>([])
 
   // Mock user for demo
   const user = { role: 'admin' }
 
   // Check permissions
   const canManageWorkflows = user && ['admin', 'associate_attorney'].includes(user.role)
-  const canViewWorkflows = user && ['admin', 'associate_attorney', 'paralegal'].includes(user.role)
 
   // Load data
   useEffect(() => {
     const loadData = async () => {
       try {
-        setLoading(true)
-        
         if (activeTab === 'templates') {
           // Load workflow templates from API
           const response = await fetch('/api/workflows')
@@ -125,8 +118,6 @@ export default function WorkflowsPage() {
         } else {
           setExecutions(getMockExecutions())
         }
-      } finally {
-        setLoading(false)
       }
     }
 
@@ -252,7 +243,7 @@ export default function WorkflowsPage() {
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-2xl font-bold text-gray-900 flex items-center">
-                <CogIcon className="h-8 w-8 mr-3 text-blue-600" />
+                <Cog6ToothIcon className="h-8 w-8 mr-3 text-blue-600" />
                 Workflow Automation
               </h1>
               <p className="text-gray-600 mt-1">
@@ -411,7 +402,7 @@ export default function WorkflowsPage() {
 
               {templates.length === 0 && (
                 <div className="text-center py-12">
-                  <CogIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <Cog6ToothIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No workflow templates</h3>
                   <p className="text-gray-600 mb-6">
                     Create your first automated workflow to streamline repetitive tasks

@@ -3,7 +3,7 @@
  */
 
 import { NextRequest } from 'next/server'
-import { supabaseServer, supabaseAdmin } from '@/lib/supabase'
+import { /* supabaseServer, */ supabaseAdmin } from '@/lib/supabase'
 import { 
   createSuccessResponse, 
   createErrorResponse, 
@@ -528,6 +528,7 @@ export async function POST(request: NextRequest) {
           ))
         }
       } catch (dbError) {
+        console.error('Database error validating assignee:', dbError)
         // In development mode, allow assignment to test users
         if (isDevelopment && taskData.assigned_to.startsWith('user-')) {
           // Mock user validation passed

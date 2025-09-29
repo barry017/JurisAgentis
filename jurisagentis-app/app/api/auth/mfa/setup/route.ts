@@ -38,6 +38,7 @@ export async function POST(request: NextRequest) {
     try {
       requireRole(user, allowedRoles)
     } catch (error) {
+      console.error('MFA setup role check failed:', error)
       await logAuditEvent('MFA_SETUP_DENIED', user.uid, request, {
         reason: 'Insufficient role permissions',
         userRole: user.role

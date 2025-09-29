@@ -6,11 +6,11 @@
 
 import { NextResponse } from 'next/server'
 
-export interface APISuccessResponse<T = any> {
+export interface APISuccessResponse<T = unknown> {
   success: true
   data?: T
   message?: string
-  [key: string]: any
+  [key: string]: unknown
 }
 
 export interface APIErrorResponse {
@@ -18,11 +18,11 @@ export interface APIErrorResponse {
   error: {
     code: string
     message: string
-    details?: Record<string, any>
+    details?: Record<string, unknown>
   }
 }
 
-export type APIResponse<T = any> = APISuccessResponse<T> | APIErrorResponse
+export type APIResponse<T = unknown> = APISuccessResponse<T> | APIErrorResponse
 
 /**
  * Create standardized success response
@@ -30,7 +30,7 @@ export type APIResponse<T = any> = APISuccessResponse<T> | APIErrorResponse
 export function createSuccessResponse<T>(
   data?: T,
   message?: string,
-  additionalFields?: Record<string, any>
+  additionalFields?: Record<string, unknown>
 ): NextResponse {
   const response: APISuccessResponse<T> = {
     success: true,
@@ -51,7 +51,7 @@ export function createErrorResponse(
   code: string,
   message: string,
   statusCode: number = 400,
-  details?: Record<string, any>
+  details?: Record<string, unknown>
 ): NextResponse {
   const response: APIErrorResponse = {
     success: false,
@@ -184,7 +184,7 @@ export function validateContentType(request: Request): boolean {
 /**
  * Safely parse JSON from request body
  */
-export async function parseRequestBody<T = any>(request: Request): Promise<T> {
+export async function parseRequestBody<T = unknown>(request: Request): Promise<T> {
   let text = ''
   try {
     text = await request.text()

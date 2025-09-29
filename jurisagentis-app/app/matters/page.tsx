@@ -9,26 +9,20 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { 
-  FolderOpenIcon,
-  PlusIcon,
-  FunnelIcon,
-  MagnifyingGlassIcon,
-  ChartBarIcon,
-  ClockIcon,
-  CurrencyDollarIcon,
-  ExclamationTriangleIcon,
-  CheckCircleIcon,
-  DocumentTextIcon,
-  UserGroupIcon,
-  CalendarIcon,
-  EyeIcon,
-  PencilSquareIcon,
-  ChevronUpDownIcon,
-  ArrowPathIcon,
-  BuildingOfficeIcon,
-  UserIcon,
-  ClipboardDocumentListIcon
-} from '@heroicons/react/24/outline'
+  FolderOpen,
+  Plus,
+  Filter,
+  Search,
+  BarChart3,
+  Clock,
+  DollarSign,
+  FileText,
+  Eye,
+  Edit,
+  ChevronsUpDown,
+  RotateCcw,
+  ClipboardList
+} from 'lucide-react'
 
 interface Matter {
   id: string
@@ -128,7 +122,6 @@ export default function MattersPage() {
       // Call the actual matters API
       const response = await fetch('/api/matters', {
         headers: {
-          'Authorization': `Bearer mock-token-development`,
           'Content-Type': 'application/json'
         }
       })
@@ -141,7 +134,7 @@ export default function MattersPage() {
       
       if (data.success && data.data.matters) {
         // Transform API data to match frontend interface
-        const transformedMatters = data.data.matters.map((matter: any) => ({
+        const transformedMatters = data.data.matters.map((matter: Record<string, unknown>) => ({
           id: matter.id,
           matter_number: matter.matter_number,
           title: matter.title,
@@ -181,7 +174,7 @@ export default function MattersPage() {
           stage_history: [], // Would need to be populated from audit logs
           documents_count: 0, // Would need to be fetched from documents API
           tasks_count: matter.matter_tasks?.length || 0,
-          tasks_completed: matter.matter_tasks?.filter((task: any) => task.status === 'completed').length || 0,
+          tasks_completed: matter.matter_tasks?.filter((task: Record<string, unknown>) => task.status === 'completed').length || 0,
           billing_status: 'not_billed' as Matter['billing_status'] // Would need additional logic
         }))
         
@@ -309,7 +302,7 @@ export default function MattersPage() {
       return matchesSearch && matchesStatus && matchesServiceType && matchesAttorney
     })
     .sort((a, b) => {
-      let aValue: any, bValue: any
+      let aValue: string | number, bValue: string | number
       
       switch (sortBy) {
         case 'client_name':
@@ -338,7 +331,7 @@ export default function MattersPage() {
           <div className="section-header">
             <div>
               <h1 className="page-title flex items-center">
-                <FolderOpenIcon className="h-8 w-8 mr-3 text-blue-600" />
+                <FolderOpen className="h-8 w-8 mr-3 text-blue-600" />
                 Matter Management
               </h1>
               <p className="page-subtitle">
@@ -351,7 +344,7 @@ export default function MattersPage() {
                 onClick={() => router.push('/matters/new')}
                 className="btn-primary flex items-center"
               >
-                <PlusIcon className="h-5 w-5 mr-2" />
+                <Plus className="h-5 w-5 mr-2" />
                 New Matter
               </button>
               
@@ -359,7 +352,7 @@ export default function MattersPage() {
                 onClick={() => setShowFilters(!showFilters)}
                 className="btn-secondary flex items-center"
               >
-                <FunnelIcon className="h-5 w-5 mr-2" />
+                <Filter className="h-5 w-5 mr-2" />
                 Filters
               </button>
               
@@ -367,7 +360,7 @@ export default function MattersPage() {
                 onClick={loadMatters}
                 className="btn-secondary flex items-center"
               >
-                <ArrowPathIcon className="h-5 w-5 mr-2" />
+                <RotateCcw className="h-5 w-5 mr-2" />
                 Refresh
               </button>
             </div>
@@ -380,7 +373,7 @@ export default function MattersPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="card">
             <div className="flex items-center">
-              <FolderOpenIcon className="h-8 w-8 text-blue-600" />
+              <FolderOpen className="h-8 w-8 text-blue-600" />
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-500">Total Matters</p>
                 <p className="text-2xl font-bold text-gray-900">{stats.total_matters}</p>
@@ -391,7 +384,7 @@ export default function MattersPage() {
 
           <div className="card">
             <div className="flex items-center">
-              <ClockIcon className="h-8 w-8 text-orange-600" />
+              <Clock className="h-8 w-8 text-orange-600" />
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-500">Needing Attention</p>
                 <p className="text-2xl font-bold text-gray-900">{stats.matters_needing_attention}</p>
@@ -402,7 +395,7 @@ export default function MattersPage() {
 
           <div className="card">
             <div className="flex items-center">
-              <CurrencyDollarIcon className="h-8 w-8 text-green-600" />
+              <DollarSign className="h-8 w-8 text-green-600" />
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-500">Pending Retainers</p>
                 <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats.total_pending_retainers)}</p>
@@ -413,7 +406,7 @@ export default function MattersPage() {
 
           <div className="card">
             <div className="flex items-center">
-              <ChartBarIcon className="h-8 w-8 text-purple-600" />
+              <BarChart3 className="h-8 w-8 text-purple-600" />
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-500">This Month</p>
                 <p className="text-2xl font-bold text-gray-900">{stats.this_month_opened}</p>
@@ -428,7 +421,7 @@ export default function MattersPage() {
           <div className="flex items-center space-x-4 mb-4">
             <div className="flex-1">
               <div className="relative">
-                <MagnifyingGlassIcon className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <Search className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 <input
                   type="text"
                   placeholder="Search matters..."
@@ -502,7 +495,7 @@ export default function MattersPage() {
             </div>
           ) : filteredMatters.length === 0 ? (
             <div className="text-center py-8">
-              <FolderOpenIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <FolderOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-600 text-lg">No matters found</p>
               <p className="text-gray-500">
                 {searchTerm || statusFilter !== 'all' || serviceTypeFilter !== 'all'
@@ -522,7 +515,7 @@ export default function MattersPage() {
                         className="flex items-center space-x-1 hover:text-gray-700"
                       >
                         <span>Matter</span>
-                        <ChevronUpDownIcon className="h-4 w-4" />
+                        <ChevronsUpDown className="h-4 w-4" />
                       </button>
                     </th>
                     
@@ -532,7 +525,7 @@ export default function MattersPage() {
                         className="flex items-center space-x-1 hover:text-gray-700"
                       >
                         <span>Client & Title</span>
-                        <ChevronUpDownIcon className="h-4 w-4" />
+                        <ChevronsUpDown className="h-4 w-4" />
                       </button>
                     </th>
                     
@@ -544,7 +537,7 @@ export default function MattersPage() {
                         className="flex items-center space-x-1 hover:text-gray-700"
                       >
                         <span>Target Date</span>
-                        <ChevronUpDownIcon className="h-4 w-4" />
+                        <ChevronsUpDown className="h-4 w-4" />
                       </button>
                     </th>
                     
@@ -566,10 +559,10 @@ export default function MattersPage() {
                       
                       <td className="table-cell">
                         <div>
-                          <div className="font-medium text-gray-900">{matter.client.name}</div>
+                          <div className="font-medium text-gray-900">{matter.client?.name || 'Unknown Client'}</div>
                           <div className="text-sm text-gray-600">{matter.title}</div>
                           <div className="text-xs text-gray-500">
-                            {matter.service_type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())} • {matter.assigned_attorney.name}
+                            {matter.service_type?.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'N/A'} • {matter.assigned_attorney?.name || 'Unassigned'}
                           </div>
                         </div>
                       </td>
@@ -607,7 +600,7 @@ export default function MattersPage() {
                       <td className="table-cell">
                         <div>
                           <div className="text-sm font-medium text-gray-900">{formatCurrency(matter.estimated_fee)}</div>
-                          <div className="text-xs text-gray-500">{matter.matter_type.replace('_', ' ')}</div>
+                          <div className="text-xs text-gray-500">{matter.matter_type?.replace('_', ' ') || 'N/A'}</div>
                           {matter.retainer_required && (
                             <div className={`text-xs ${matter.retainer_paid ? 'text-green-600' : 'text-red-600'}`}>
                               Retainer: {matter.retainer_paid ? 'Paid' : 'Due'}
@@ -623,7 +616,7 @@ export default function MattersPage() {
                             className="p-1 text-gray-400 hover:text-orange-600 transition-colors"
                             title="View Documents"
                           >
-                            <DocumentTextIcon className="h-4 w-4" />
+                            <FileText className="h-4 w-4" />
                           </button>
                           
                           <button
@@ -631,7 +624,7 @@ export default function MattersPage() {
                             className="p-1 text-gray-400 hover:text-purple-600 transition-colors"
                             title="View Tasks"
                           >
-                            <ClipboardDocumentListIcon className="h-4 w-4" />
+                            <ClipboardList className="h-4 w-4" />
                           </button>
                           
                           <button
@@ -639,7 +632,7 @@ export default function MattersPage() {
                             className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
                             title="View Matter"
                           >
-                            <EyeIcon className="h-4 w-4" />
+                            <Eye className="h-4 w-4" />
                           </button>
                           
                           <button
@@ -647,7 +640,7 @@ export default function MattersPage() {
                             className="p-1 text-gray-400 hover:text-green-600 transition-colors"
                             title="Edit Matter"
                           >
-                            <PencilSquareIcon className="h-4 w-4" />
+                            <Edit className="h-4 w-4" />
                           </button>
                         </div>
                       </td>

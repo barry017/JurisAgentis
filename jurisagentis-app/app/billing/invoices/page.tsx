@@ -19,7 +19,6 @@ import {
   PrinterIcon,
   ExclamationTriangleIcon,
   CheckCircleIcon,
-  ClockIcon,
   CurrencyDollarIcon,
   ChevronUpDownIcon,
   ArrowDownTrayIcon

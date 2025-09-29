@@ -5,7 +5,6 @@
  * Tests the authentication login API endpoint contract
  */
 
-import { NextRequest } from 'next/server'
 
 describe('POST /api/auth/login - Contract Test', () => {
   const endpoint = '/api/auth/login'
@@ -24,7 +23,7 @@ describe('POST /api/auth/login - Contract Test', () => {
       }
 
       // This will fail initially - no API route exists yet
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -42,7 +41,7 @@ describe('POST /api/auth/login - Contract Test', () => {
         rememberMe: false
       }
 
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -64,7 +63,7 @@ describe('POST /api/auth/login - Contract Test', () => {
         rememberMe: false
       }
 
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -87,7 +86,7 @@ describe('POST /api/auth/login - Contract Test', () => {
         rememberMe: false
       }
 
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -111,7 +110,7 @@ describe('POST /api/auth/login - Contract Test', () => {
         rememberMe: false
       }
 
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -126,15 +125,15 @@ describe('POST /api/auth/login - Contract Test', () => {
       // Test response structure matches OpenAPI contract
       expect(successResponse).toMatchObject({
         success: true,
-        token: expect.any(String),
+        token: expect.any(String) as string,
         user: expect.objectContaining({
-          uid: expect.any(String),
-          email: expect.any(String),
-          role: expect.any(String),
+          uid: expect.any(String) as string,
+          email: expect.any(String) as string,
+          role: expect.any(String) as string,
         }),
-        permissions: expect.any(Object),
+        permissions: expect.any(Object) as Record<string, unknown>,
         session: expect.objectContaining({
-          sessionId: expect.any(String),
+          sessionId: expect.any(String) as string,
         }),
       })
 
@@ -143,14 +142,14 @@ describe('POST /api/auth/login - Contract Test', () => {
       
       // Validate user object structure
       expect(successResponse.user).toMatchObject({
-        uid: expect.any(String),
+        uid: expect.any(String) as string,
         email: 'admin@jurisagentis.com',
         role: expect.stringMatching(/^(admin|associate_attorney|paralegal|assistant|client|client_related_party)$/),
         profile: expect.objectContaining({
-          firstName: expect.any(String),
-          lastName: expect.any(String),
+          firstName: expect.any(String) as string,
+          lastName: expect.any(String) as string,
         }),
-        mfaEnabled: expect.any(Boolean),
+        mfaEnabled: expect.any(Boolean) as boolean,
         status: expect.stringMatching(/^(active|inactive|suspended)$/),
       })
     })
@@ -162,7 +161,7 @@ describe('POST /api/auth/login - Contract Test', () => {
         rememberMe: false
       }
 
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -176,8 +175,8 @@ describe('POST /api/auth/login - Contract Test', () => {
       expect(errorResponse).toMatchObject({
         success: false,
         error: {
-          code: expect.any(String),
-          message: expect.any(String),
+          code: expect.any(String) as string,
+          message: expect.any(String) as string,
         },
       })
     })
@@ -189,7 +188,7 @@ describe('POST /api/auth/login - Contract Test', () => {
         rememberMe: false
       }
 
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -212,7 +211,7 @@ describe('POST /api/auth/login - Contract Test', () => {
 
   describe('HTTP Method Contract', () => {
     it('should reject GET requests', async () => {
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'GET',
       })
 
@@ -220,7 +219,7 @@ describe('POST /api/auth/login - Contract Test', () => {
     })
 
     it('should reject PUT requests', async () => {
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -232,7 +231,7 @@ describe('POST /api/auth/login - Contract Test', () => {
     })
 
     it('should reject DELETE requests', async () => {
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'DELETE',
       })
 
@@ -242,7 +241,7 @@ describe('POST /api/auth/login - Contract Test', () => {
 
   describe('Content-Type Contract', () => {
     it('should reject requests without Content-Type header', async () => {
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         body: JSON.stringify({
           email: 'admin@jurisagentis.com',
@@ -257,7 +256,7 @@ describe('POST /api/auth/login - Contract Test', () => {
     })
 
     it('should reject requests with wrong Content-Type', async () => {
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'text/plain',
@@ -280,7 +279,7 @@ describe('POST /api/auth/login - Contract Test', () => {
         rememberMe: false
       }
 
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

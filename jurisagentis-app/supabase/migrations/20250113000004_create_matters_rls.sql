@@ -26,8 +26,8 @@ DECLARE
   user_id UUID;
 BEGIN
   -- Get current user info
-  SELECT auth.jwt() ->> 'sub' INTO user_id;
-  SELECT role FROM user_profiles WHERE uid = user_id::UUID INTO user_role;
+  user_id := (auth.jwt() ->> 'sub')::UUID;
+  user_role := get_user_role(user_id);
   
   -- Admin has access to all matters
   IF user_role = 'admin' THEN
@@ -41,10 +41,10 @@ BEGIN
       WHERE m.id = matter_id 
       AND m.deleted_at IS NULL
       AND (
-        m.responsible_attorney = user_id::UUID OR
-        m.assisting_paralegal = user_id::UUID OR
-        m.originating_attorney = user_id::UUID OR
-        m.created_by = user_id::UUID OR
+        m.responsible_attorney = user_id OR
+        m.assisting_paralegal = user_id OR
+        m.originating_attorney = user_id OR
+        m.created_by = user_id OR
         -- Also check if they have access to the client
         user_has_client_access(m.client_id)
       )
@@ -68,8 +68,7 @@ BEGIN
       JOIN clients c ON m.client_id = c.id
       JOIN user_profiles up ON c.email = up.email
       WHERE m.id = matter_id 
-      AND up.uid = user_id::UUID
-      AND up.role = 'client'
+      AND up.id = user_id
       AND m.deleted_at IS NULL
       AND c.deleted_at IS NULL
     );
@@ -92,18 +91,10 @@ CREATE POLICY "Matters - Admin full access" ON matters
   FOR ALL 
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role = 'admin'
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) = 'admin'
   )
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role = 'admin'
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) = 'admin'
   );
 
 -- Attorney/Paralegal: Read/write access to assigned matters
@@ -111,11 +102,7 @@ CREATE POLICY "Matters - Attorney/Paralegal read/write assigned" ON matters
   FOR ALL 
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role IN ('associate_attorney', 'paralegal')
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) IN ('associate_attorney', 'paralegal')
     AND (
       responsible_attorney = (auth.jwt() ->> 'sub')::UUID OR
       assisting_paralegal = (auth.jwt() ->> 'sub')::UUID OR
@@ -126,11 +113,7 @@ CREATE POLICY "Matters - Attorney/Paralegal read/write assigned" ON matters
     AND deleted_at IS NULL
   )
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role IN ('associate_attorney', 'paralegal')
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) IN ('associate_attorney', 'paralegal')
   );
 
 -- Assistant: Read-only access to assigned matters
@@ -138,11 +121,7 @@ CREATE POLICY "Matters - Assistant read assigned" ON matters
   FOR SELECT 
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role = 'assistant'
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) = 'assistant'
     AND user_has_client_access(client_id)
     AND deleted_at IS NULL
   );
@@ -152,11 +131,11 @@ CREATE POLICY "Matters - Client read own matters" ON matters
   FOR SELECT 
   TO authenticated
   USING (
-    EXISTS (
+    get_user_role((auth.jwt() ->> 'sub')::UUID) = 'client'
+    AND EXISTS (
       SELECT 1 FROM user_profiles up
       JOIN clients c ON c.email = up.email
-      WHERE up.uid = (auth.jwt() ->> 'sub')::UUID 
-      AND up.role = 'client'
+      WHERE up.id = (auth.jwt() ->> 'sub')::UUID 
       AND c.id = matters.client_id
     )
     AND deleted_at IS NULL
@@ -169,18 +148,10 @@ CREATE POLICY "Matter Tasks - Admin full access" ON matter_tasks
   FOR ALL 
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role = 'admin'
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) = 'admin'
   )
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role = 'admin'
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) = 'admin'
   );
 
 -- Attorney/Paralegal: Read/write access to tasks for matters they can access
@@ -188,20 +159,12 @@ CREATE POLICY "Matter Tasks - Attorney/Paralegal read/write for assigned matters
   FOR ALL 
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role IN ('associate_attorney', 'paralegal')
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) IN ('associate_attorney', 'paralegal')
     AND user_has_matter_access(matter_id)
     AND deleted_at IS NULL
   )
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role IN ('associate_attorney', 'paralegal')
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) IN ('associate_attorney', 'paralegal')
     AND user_has_matter_access(matter_id)
   );
 
@@ -210,11 +173,7 @@ CREATE POLICY "Matter Tasks - Assistant read for assigned matters" ON matter_tas
   FOR SELECT 
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role = 'assistant'
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) = 'assistant'
     AND user_has_matter_access(matter_id)
     AND deleted_at IS NULL
   );
@@ -240,18 +199,10 @@ CREATE POLICY "Matter Participants - Admin full access" ON matter_participants
   FOR ALL 
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role = 'admin'
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) = 'admin'
   )
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role = 'admin'
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) = 'admin'
   );
 
 -- Attorney/Paralegal: Read/write access to participants for matters they can access
@@ -259,20 +210,12 @@ CREATE POLICY "Matter Participants - Attorney/Paralegal read/write for assigned 
   FOR ALL 
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role IN ('associate_attorney', 'paralegal')
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) IN ('associate_attorney', 'paralegal')
     AND user_has_matter_access(matter_id)
     AND deleted_at IS NULL
   )
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role IN ('associate_attorney', 'paralegal')
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) IN ('associate_attorney', 'paralegal')
     AND user_has_matter_access(matter_id)
   );
 
@@ -281,11 +224,7 @@ CREATE POLICY "Matter Participants - Assistant read for assigned matters" ON mat
   FOR SELECT 
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role = 'assistant'
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) = 'assistant'
     AND user_has_matter_access(matter_id)
     AND deleted_at IS NULL
   );

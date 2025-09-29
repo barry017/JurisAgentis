@@ -50,8 +50,8 @@ CREATE TABLE IF NOT EXISTS fee_schedules (
     -- Audit fields
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    created_by UUID NOT NULL REFERENCES user_profiles(uid),
-    updated_by UUID NOT NULL REFERENCES user_profiles(uid)
+    created_by UUID NOT NULL REFERENCES user_profiles(id),
+    updated_by UUID NOT NULL REFERENCES user_profiles(id)
 );
 
 -- Matter billing configurations (links matters to fee schedules)
@@ -110,8 +110,8 @@ CREATE TABLE IF NOT EXISTS matter_billing (
     -- Audit fields
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    created_by UUID NOT NULL REFERENCES user_profiles(uid),
-    updated_by UUID NOT NULL REFERENCES user_profiles(uid)
+    created_by UUID NOT NULL REFERENCES user_profiles(id),
+    updated_by UUID NOT NULL REFERENCES user_profiles(id)
 );
 
 -- Invoices table for billing
@@ -173,10 +173,10 @@ CREATE TABLE IF NOT EXISTS invoices (
     -- Audit fields
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    created_by UUID NOT NULL REFERENCES user_profiles(uid),
-    updated_by UUID NOT NULL REFERENCES user_profiles(uid),
+    created_by UUID NOT NULL REFERENCES user_profiles(id),
+    updated_by UUID NOT NULL REFERENCES user_profiles(id),
     deleted_at TIMESTAMP WITH TIME ZONE,
-    deleted_by UUID REFERENCES user_profiles(uid)
+    deleted_by UUID REFERENCES user_profiles(id)
 );
 
 -- Invoice line items (for detailed billing)
@@ -200,7 +200,7 @@ CREATE TABLE IF NOT EXISTS invoice_line_items (
     tax_amount DECIMAL(10,2) DEFAULT 0,
     
     -- Reference information
-    timekeeper_id UUID REFERENCES user_profiles(uid), -- For hourly entries
+    timekeeper_id UUID REFERENCES user_profiles(id), -- For hourly entries
     expense_category VARCHAR(100),
     billable BOOLEAN DEFAULT true,
     
@@ -210,7 +210,7 @@ CREATE TABLE IF NOT EXISTS invoice_line_items (
     
     -- Audit fields
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    created_by UUID NOT NULL REFERENCES user_profiles(uid)
+    created_by UUID NOT NULL REFERENCES user_profiles(id)
 );
 
 -- Payments received
@@ -266,10 +266,10 @@ CREATE TABLE IF NOT EXISTS payments (
     -- Audit fields
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    created_by UUID NOT NULL REFERENCES user_profiles(uid),
-    updated_by UUID NOT NULL REFERENCES user_profiles(uid),
+    created_by UUID NOT NULL REFERENCES user_profiles(id),
+    updated_by UUID NOT NULL REFERENCES user_profiles(id),
     deleted_at TIMESTAMP WITH TIME ZONE,
-    deleted_by UUID REFERENCES user_profiles(uid)
+    deleted_by UUID REFERENCES user_profiles(id)
 );
 
 -- Expenses for matters
@@ -318,7 +318,7 @@ CREATE TABLE IF NOT EXISTS expenses (
     
     -- Approval workflow
     requires_approval BOOLEAN DEFAULT false,
-    approved_by UUID REFERENCES user_profiles(uid),
+    approved_by UUID REFERENCES user_profiles(id),
     approved_date DATE,
     approval_notes TEXT,
     
@@ -335,10 +335,10 @@ CREATE TABLE IF NOT EXISTS expenses (
     -- Audit fields
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    created_by UUID NOT NULL REFERENCES user_profiles(uid),
-    updated_by UUID NOT NULL REFERENCES user_profiles(uid),
+    created_by UUID NOT NULL REFERENCES user_profiles(id),
+    updated_by UUID NOT NULL REFERENCES user_profiles(id),
     deleted_at TIMESTAMP WITH TIME ZONE,
-    deleted_by UUID REFERENCES user_profiles(uid)
+    deleted_by UUID REFERENCES user_profiles(id)
 );
 
 -- Time entries (for the 2% of cases that are hourly)
@@ -348,7 +348,7 @@ CREATE TABLE IF NOT EXISTS time_entries (
     -- Time entry identification
     matter_id UUID NOT NULL REFERENCES matters(id) ON DELETE CASCADE,
     client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
-    timekeeper_id UUID NOT NULL REFERENCES user_profiles(uid),
+    timekeeper_id UUID NOT NULL REFERENCES user_profiles(id),
     
     -- Time details
     entry_date DATE NOT NULL DEFAULT CURRENT_DATE,
@@ -370,7 +370,7 @@ CREATE TABLE IF NOT EXISTS time_entries (
     
     -- Status and approval
     status VARCHAR(50) DEFAULT 'draft', -- 'draft', 'submitted', 'approved', 'billed'
-    approved_by UUID REFERENCES user_profiles(uid),
+    approved_by UUID REFERENCES user_profiles(id),
     approved_date DATE,
     
     -- Timer tracking
@@ -384,10 +384,10 @@ CREATE TABLE IF NOT EXISTS time_entries (
     -- Audit fields
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    created_by UUID NOT NULL REFERENCES user_profiles(uid),
-    updated_by UUID NOT NULL REFERENCES user_profiles(uid),
+    created_by UUID NOT NULL REFERENCES user_profiles(id),
+    updated_by UUID NOT NULL REFERENCES user_profiles(id),
     deleted_at TIMESTAMP WITH TIME ZONE,
-    deleted_by UUID REFERENCES user_profiles(uid)
+    deleted_by UUID REFERENCES user_profiles(id)
 );
 
 -- Create indexes for performance
@@ -404,7 +404,8 @@ CREATE INDEX idx_invoices_client_id ON invoices(client_id) WHERE deleted_at IS N
 CREATE INDEX idx_invoices_status ON invoices(status) WHERE deleted_at IS NULL;
 CREATE INDEX idx_invoices_due_date ON invoices(due_date) WHERE deleted_at IS NULL;
 CREATE INDEX idx_invoices_invoice_date ON invoices(invoice_date) WHERE deleted_at IS NULL;
-CREATE INDEX idx_invoices_overdue ON invoices(due_date) WHERE status IN ('sent', 'viewed', 'partial_payment') AND due_date < CURRENT_DATE;
+CREATE INDEX idx_invoices_status_due_date ON invoices(due_date, status)
+  WHERE status IN ('sent', 'viewed', 'partial_payment');
 
 CREATE INDEX idx_invoice_line_items_invoice_id ON invoice_line_items(invoice_id);
 CREATE INDEX idx_invoice_line_items_type ON invoice_line_items(line_type);

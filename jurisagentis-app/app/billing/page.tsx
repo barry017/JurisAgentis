@@ -5,7 +5,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-// import { useAuth } from '@/lib/hooks/useAuth' // Commented out to fix 500 error
+import { useAuth } from '@/lib/hooks/useAuth'
 import { useRouter } from 'next/navigation'
 import { 
   BanknotesIcon, 
@@ -61,9 +61,7 @@ interface RecentPayment {
 }
 
 export default function BillingPage() {
-  // const { user, loading } = useAuth() // Commented out to fix 500 error
-  const user = { role: 'admin' } // Mock user for demo
-  const loading = false
+  const { user, loading } = useAuth()
   const router = useRouter()
 
   // State for billing data

@@ -15,7 +15,7 @@ describe('POST /api/auth/mfa/setup - Contract Test', () => {
   describe('Authentication Required', () => {
     it('should reject requests without authentication token', async () => {
       // This will fail - no endpoint exists yet
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -30,7 +30,7 @@ describe('POST /api/auth/mfa/setup - Contract Test', () => {
     })
 
     it('should reject requests with invalid authentication token', async () => {
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -48,7 +48,7 @@ describe('POST /api/auth/mfa/setup - Contract Test', () => {
     it('should accept requests with valid authentication token', async () => {
       const validToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c'
       
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -65,7 +65,7 @@ describe('POST /api/auth/mfa/setup - Contract Test', () => {
     it('should return success response with MFA setup data', async () => {
       const validToken = 'valid-jwt-token'
       
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -80,10 +80,10 @@ describe('POST /api/auth/mfa/setup - Contract Test', () => {
       // Test response structure matches OpenAPI contract
       expect(successResponse).toMatchObject({
         success: true,
-        qrCode: expect.any(String),
-        manualEntryKey: expect.any(String),
+        qrCode: expect.any(String) as string,
+        manualEntryKey: expect.any(String) as string,
         backupCodes: expect.arrayContaining([
-          expect.any(String)
+          expect.any(String) as string
         ]),
       })
 
@@ -103,7 +103,7 @@ describe('POST /api/auth/mfa/setup - Contract Test', () => {
     it('should return 400 if MFA is already enabled', async () => {
       const validToken = 'valid-jwt-token-mfa-enabled'
       
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -119,7 +119,7 @@ describe('POST /api/auth/mfa/setup - Contract Test', () => {
         error: {
           code: 'MFA_ALREADY_ENABLED',
           message: expect.stringContaining('already enabled'),
-          details: expect.any(Object),
+          details: expect.any(Object) as Record<string, unknown>,
         },
       })
     })
@@ -127,7 +127,7 @@ describe('POST /api/auth/mfa/setup - Contract Test', () => {
     it('should return 403 for insufficient permissions', async () => {
       const clientToken = 'valid-jwt-token-client-role'
       
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -145,7 +145,7 @@ describe('POST /api/auth/mfa/setup - Contract Test', () => {
 
   describe('HTTP Method Contract', () => {
     it('should reject GET requests', async () => {
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'GET',
         headers: {
           'Authorization': 'Bearer valid-token',
@@ -156,7 +156,7 @@ describe('POST /api/auth/mfa/setup - Contract Test', () => {
     })
 
     it('should reject PUT requests', async () => {
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -169,7 +169,7 @@ describe('POST /api/auth/mfa/setup - Contract Test', () => {
     })
 
     it('should reject DELETE requests', async () => {
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'DELETE',
         headers: {
           'Authorization': 'Bearer valid-token',
@@ -184,7 +184,7 @@ describe('POST /api/auth/mfa/setup - Contract Test', () => {
     it('should include security headers in response', async () => {
       const validToken = 'valid-jwt-token'
       
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -200,7 +200,7 @@ describe('POST /api/auth/mfa/setup - Contract Test', () => {
     })
 
     it('should not expose sensitive data in error responses', async () => {
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -226,7 +226,7 @@ describe('POST /api/auth/mfa/setup - Contract Test', () => {
       // Make multiple rapid requests
       for (let i = 0; i < 6; i++) {
         requests.push(
-          fetch(`http://localhost:3000${endpoint}`, {
+          fetch(`http://localhost:3001${endpoint}`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -254,7 +254,7 @@ describe('POST /api/auth/mfa/setup - Contract Test', () => {
     it('should log MFA setup attempts for audit trail', async () => {
       const validToken = 'valid-jwt-token'
       
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -2,7 +2,7 @@
  * API Helper Functions
  */
 
-export interface DatabaseResponse<T = any> {
+export interface DatabaseResponse<T = unknown> {
   data: T | null
   message: string
   status: 'SUCCESS' | 'ERROR' | 'NOT_FOUND' | 'UNAUTHORIZED' | 'VALIDATION_ERROR' | 'DATABASE_ERROR' | 'PERMISSION_DENIED' | 'DUPLICATE_EMAIL' | 'INTERNAL_ERROR'
@@ -12,7 +12,7 @@ export interface DatabaseResponse<T = any> {
     offset?: number
     page?: number
     has_more?: boolean
-    [key: string]: any
+    [key: string]: unknown
   }
   timestamp: string
 }
@@ -74,7 +74,7 @@ export function formatMatterNumber(practiceArea: string, year?: number, sequence
   return `${yearCode}-${areaCode}-${sequenceStr}`
 }
 
-export function parseApiError(error: any): string {
+export function parseApiError(error: unknown): string {
   if (typeof error === 'string') {
     return error
   }

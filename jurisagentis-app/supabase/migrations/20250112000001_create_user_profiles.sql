@@ -65,9 +65,16 @@ FOR UPDATE TO authenticated
 USING (id = auth.uid())
 WITH CHECK (
   id = auth.uid() AND
-  -- Users can only update these fields themselves
-  (OLD.email = NEW.email) AND
-  (OLD.status = NEW.status)
+  email = (
+    SELECT existing.email
+    FROM user_profiles AS existing
+    WHERE existing.id = auth.uid()
+  ) AND
+  status = (
+    SELECT existing.status
+    FROM user_profiles AS existing
+    WHERE existing.id = auth.uid()
+  )
 );
 
 -- RLS Policy: Admins can update any profile

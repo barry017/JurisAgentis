@@ -27,7 +27,6 @@ import {
   TrashIcon,
   FunnelIcon,
   MagnifyingGlassIcon,
-  SparklesIcon,
   BoltIcon,
   ArrowPathIcon,
   Cog6ToothIcon,
@@ -59,7 +58,7 @@ interface Notification {
     workflowId?: string
     userId?: string
     userName?: string
-    [key: string]: any
+    [key: string]: unknown
   }
   expiresAt?: string
   relatedNotifications?: string[]
@@ -319,8 +318,8 @@ export default function NotificationsPage() {
       if (Math.random() > 0.7) { // 30% chance every 10 seconds
         const newNotification: Notification = {
           id: `notification-${Date.now()}`,
-          type: ['info', 'success', 'warning'][Math.floor(Math.random() * 3)] as any,
-          category: ['client', 'matter', 'document', 'calendar'][Math.floor(Math.random() * 4)] as any,
+          type: (['info', 'success', 'warning'] as const)[Math.floor(Math.random() * 3)],
+          category: (['client', 'matter', 'document', 'calendar'] as const)[Math.floor(Math.random() * 4)],
           title: 'New Activity Detected',
           message: `Real-time update: ${Math.random() > 0.5 ? 'Document updated' : 'Client action required'}`,
           timestamp: new Date().toISOString(),

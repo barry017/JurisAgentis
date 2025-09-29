@@ -1,7 +1,34 @@
--- Create audit event type enum
+-- Comprehensive audit logging foundation
+-- Consolidates audit infrastructure for authentication, document, and workflow events
+
+BEGIN;
+
+DROP TABLE IF EXISTS audit_log_search_index CASCADE;
+DROP TABLE IF EXISTS audit_log_attachments CASCADE;
+DROP TABLE IF EXISTS audit_logs CASCADE;
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'audit_event_type') THEN
+    DROP TYPE audit_event_type;
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'audit_entity_type') THEN
+    DROP TYPE audit_entity_type;
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'audit_severity') THEN
+    DROP TYPE audit_severity;
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'audit_result') THEN
+    DROP TYPE audit_result;
+  END IF;
+END;
+$$;
+
+-- Action catalogue combines legacy and new events
 CREATE TYPE audit_event_type AS ENUM (
+  -- Legacy authentication & access events
   'auth_login',
-  'auth_logout', 
+  'auth_logout',
   'auth_failed_login',
   'auth_mfa_setup',
   'auth_mfa_verify',
@@ -14,129 +41,408 @@ CREATE TYPE audit_event_type AS ENUM (
   'temp_access_revoke',
   'session_terminate',
   'data_access',
-  'unauthorized_access_attempt'
+  'unauthorized_access_attempt',
+  -- Document lifecycle actions
+  'create',
+  'read',
+  'update',
+  'delete',
+  'archive',
+  'restore',
+  'generate_from_template',
+  'create_version',
+  'download',
+  'print',
+  'share',
+  -- Permission & security actions
+  'grant_access',
+  'revoke_access',
+  'modify_permissions',
+  'login',
+  'logout',
+  'failed_login',
+  -- Collaboration & workflow
+  'add_comment',
+  'resolve_comment',
+  'mention_user',
+  'react_to_comment',
+  -- Signature & template management
+  'create_signature_request',
+  'sign_document',
+  'decline_signature',
+  'cancel_signature_request',
+  'send_reminder',
+  'create_template',
+  'update_template',
+  'use_template',
+  'archive_template',
+  -- System maintenance
+  'backup_created',
+  'system_maintenance',
+  'security_scan',
+  'data_export',
+  'data_import',
+  'configuration_change',
+  -- Workflow execution
+  'start_workflow',
+  'complete_workflow',
+  'fail_workflow',
+  'pause_workflow',
+  'resume_workflow'
 );
 
--- Create audit result enum
+-- Entities covered across the platform
+CREATE TYPE audit_entity_type AS ENUM (
+  'authentication',
+  'user_management',
+  'user_access',
+  'user_profile',
+  'system',
+  'document',
+  'document_version',
+  'template',
+  'signature_request',
+  'comment',
+  'user',
+  'matter',
+  'client',
+  'share_link',
+  'configuration',
+  'workflow',
+  'workflow_execution',
+  'workflow_step',
+  'calendar_event',
+  'calendar_deadline',
+  'integration',
+  'search',
+  'retention_policy'
+);
+
 CREATE TYPE audit_result AS ENUM ('success', 'failure', 'error');
+CREATE TYPE audit_severity AS ENUM ('info', 'warning', 'error', 'critical', 'low', 'medium', 'high');
 
--- Create audit severity enum
-CREATE TYPE audit_severity AS ENUM ('info', 'warning', 'error', 'critical');
-
--- Create audit_logs table with partitioning for performance
+-- Main audit table
 CREATE TABLE audit_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  timestamp TIMESTAMPTZ DEFAULT NOW(),
+  action_type audit_event_type NOT NULL,
+  entity_type audit_entity_type NOT NULL,
+  entity_id UUID,
   user_id UUID REFERENCES auth.users(id),
-  actor_id UUID REFERENCES auth.users(id), -- Who performed the action
-  event_type audit_event_type NOT NULL,
-  resource TEXT NOT NULL,
-  action TEXT NOT NULL,
-  result audit_result NOT NULL,
+  session_id VARCHAR(255),
+  impersonated_by UUID REFERENCES auth.users(id),
   ip_address INET,
   user_agent TEXT,
-  details JSONB DEFAULT '{}',
-  before_state JSONB,
-  after_state JSONB,
-  session_id UUID,
+  request_id VARCHAR(255),
+  action_description TEXT NOT NULL,
+  old_values JSONB,
+  new_values JSONB,
+  metadata JSONB DEFAULT '{}'::JSONB,
   severity audit_severity DEFAULT 'info',
-  retained_until TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '6 years'),
-  
-  -- Partition key for performance (will be partitioned by created_at monthly)
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  
-  -- Data validation constraints
-  CONSTRAINT valid_timestamp CHECK (timestamp <= NOW()),
-  CONSTRAINT valid_retention CHECK (retained_until > created_at)
-) PARTITION BY RANGE (created_at);
+  is_sensitive BOOLEAN DEFAULT false,
+  compliance_tags TEXT[] DEFAULT '{}',
+  result audit_result DEFAULT 'success',
+  success BOOLEAN DEFAULT true,
+  error_message TEXT,
+  error_code VARCHAR(100),
+  timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  duration_ms INTEGER,
+  country VARCHAR(100),
+  region VARCHAR(100),
+  city VARCHAR(100),
+  device_type VARCHAR(50),
+  browser_name VARCHAR(100),
+  operating_system VARCHAR(100),
+  is_anonymized BOOLEAN DEFAULT false,
+  retention_until TIMESTAMPTZ,
+  parent_audit_id UUID REFERENCES audit_logs(id),
+  trace_id VARCHAR(255),
+  correlation_id VARCHAR(255)
+);
 
--- Create initial partition for current month
-CREATE TABLE audit_logs_2025_01 PARTITION OF audit_logs 
-FOR VALUES FROM ('2025-01-01') TO ('2025-02-01');
+CREATE TABLE audit_log_attachments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  audit_log_id UUID NOT NULL REFERENCES audit_logs(id) ON DELETE CASCADE,
+  file_name VARCHAR(255) NOT NULL,
+  file_path TEXT NOT NULL,
+  file_size BIGINT NOT NULL,
+  mime_type VARCHAR(100),
+  file_hash VARCHAR(64),
+  attachment_type VARCHAR(100),
+  description TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
--- Create next month's partition  
-CREATE TABLE audit_logs_2025_02 PARTITION OF audit_logs 
-FOR VALUES FROM ('2025-02-01') TO ('2025-03-01');
+CREATE TABLE audit_log_search_index (
+  audit_log_id UUID PRIMARY KEY REFERENCES audit_logs(id) ON DELETE CASCADE,
+  search_vector TSVECTOR NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
 
--- Create indexes for performance (on parent table)
+-- Indexes for common query paths
 CREATE INDEX idx_audit_logs_timestamp ON audit_logs(timestamp);
 CREATE INDEX idx_audit_logs_user_id ON audit_logs(user_id);
-CREATE INDEX idx_audit_logs_actor_id ON audit_logs(actor_id);
-CREATE INDEX idx_audit_logs_event_type ON audit_logs(event_type);
-CREATE INDEX idx_audit_logs_result ON audit_logs(result);
+CREATE INDEX idx_audit_logs_entity ON audit_logs(entity_type, entity_id);
+CREATE INDEX idx_audit_logs_action_type ON audit_logs(action_type);
 CREATE INDEX idx_audit_logs_severity ON audit_logs(severity);
-CREATE INDEX idx_audit_logs_created_at ON audit_logs(created_at);
 CREATE INDEX idx_audit_logs_ip_address ON audit_logs(ip_address);
+CREATE INDEX idx_audit_logs_session_id ON audit_logs(session_id);
+CREATE INDEX idx_audit_logs_result ON audit_logs(result);
+CREATE INDEX idx_audit_logs_sensitive ON audit_logs(is_sensitive) WHERE is_sensitive = true;
+CREATE INDEX idx_audit_logs_compliance ON audit_logs USING GIN(compliance_tags);
+CREATE INDEX idx_audit_logs_correlation ON audit_logs(correlation_id) WHERE correlation_id IS NOT NULL;
+CREATE INDEX idx_audit_logs_trace ON audit_logs(trace_id) WHERE trace_id IS NOT NULL;
+CREATE INDEX idx_audit_logs_user_timestamp ON audit_logs(user_id, timestamp);
+CREATE INDEX idx_audit_logs_entity_timestamp ON audit_logs(entity_type, entity_id, timestamp);
+CREATE INDEX idx_audit_logs_action_timestamp ON audit_logs(action_type, timestamp);
+CREATE INDEX idx_audit_log_search_vector ON audit_log_search_index USING GIN(search_vector);
 
--- Enable Row Level Security
+-- Row level security: leverage existing role helper
 ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audit_log_attachments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audit_log_search_index ENABLE ROW LEVEL SECURITY;
 
--- RLS Policy: Admins can view all audit logs
-CREATE POLICY "Admin audit access" ON audit_logs
-FOR SELECT TO authenticated
-USING (get_user_role(auth.uid()) = 'admin');
+CREATE POLICY audit_logs_access_policy ON audit_logs
+  FOR SELECT
+  USING (
+    user_id = auth.uid()
+    OR
+    (entity_type IN ('document', 'document_version') AND entity_id IN (
+      SELECT d.id
+      FROM documents d
+      JOIN matter_access ma ON d.matter_id = ma.matter_id
+      WHERE ma.user_id = auth.uid() AND (ma.can_view OR ma.can_edit OR ma.can_manage)
+    ))
+    OR
+    (entity_type IN ('matter', 'client') AND entity_id IN (
+      SELECT ma.matter_id
+      FROM matter_access ma
+      WHERE ma.user_id = auth.uid() AND ma.can_manage
+    ))
+    OR
+    get_user_role((auth.jwt() ->> 'sub')::UUID) = 'admin'
+  );
 
--- RLS Policy: Users can view their own audit events
-CREATE POLICY "Own audit events" ON audit_logs
-FOR SELECT TO authenticated  
-USING (user_id = auth.uid());
+CREATE POLICY audit_log_attachments_access_policy ON audit_log_attachments
+  FOR SELECT
+  USING (audit_log_id IN (SELECT id FROM audit_logs WHERE true));
 
--- RLS Policy: System can insert audit logs
-CREATE POLICY "System audit insert" ON audit_logs
-FOR INSERT TO authenticated
-WITH CHECK (TRUE); -- System needs to log all events
+CREATE POLICY audit_log_search_index_access_policy ON audit_log_search_index
+  FOR SELECT
+  USING (audit_log_id IN (SELECT id FROM audit_logs WHERE true));
 
--- Function to create monthly partition automatically
-CREATE OR REPLACE FUNCTION create_monthly_audit_partition(target_date DATE)
-RETURNS BOOLEAN AS $$
+-- Helper to build search vectors
+CREATE OR REPLACE FUNCTION audit_log_search_index_refresh()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO audit_log_search_index (audit_log_id, search_vector, updated_at)
+  VALUES (
+    NEW.id,
+    to_tsvector('english',
+      COALESCE(NEW.action_description, '') || ' ' ||
+      COALESCE(NEW.action_type::TEXT, '') || ' ' ||
+      COALESCE(NEW.entity_type::TEXT, '') || ' ' ||
+      COALESCE(NEW.old_values::TEXT, '') || ' ' ||
+      COALESCE(NEW.new_values::TEXT, '') || ' ' ||
+      COALESCE(NEW.metadata::TEXT, '')
+    ),
+    NOW()
+  )
+  ON CONFLICT (audit_log_id)
+  DO UPDATE SET
+    search_vector = EXCLUDED.search_vector,
+    updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER audit_log_search_vector_trigger
+  AFTER INSERT OR UPDATE ON audit_logs
+  FOR EACH ROW
+  EXECUTE FUNCTION audit_log_search_index_refresh();
+
+-- Core API: used by later migrations and wrappers
+CREATE OR REPLACE FUNCTION create_audit_log(
+  p_action_type audit_event_type,
+  p_entity_type audit_entity_type,
+  p_entity_id UUID,
+  p_description TEXT,
+  p_old_values JSONB DEFAULT NULL,
+  p_new_values JSONB DEFAULT NULL,
+  p_metadata JSONB DEFAULT NULL,
+  p_severity audit_severity DEFAULT 'info',
+  p_is_sensitive BOOLEAN DEFAULT false,
+  p_compliance_tags TEXT[] DEFAULT NULL,
+  p_result audit_result DEFAULT 'success',
+  p_correlation_id VARCHAR DEFAULT NULL
+)
+RETURNS UUID AS $$
 DECLARE
-  partition_name TEXT;
-  start_date DATE;
-  end_date DATE;
-  partition_exists BOOLEAN;
+  audit_id UUID;
+  current_ip INET;
+  current_user_agent TEXT;
 BEGIN
-  -- Calculate partition bounds
-  start_date := date_trunc('month', target_date)::DATE;
-  end_date := (start_date + INTERVAL '1 month')::DATE;
-  partition_name := 'audit_logs_' || to_char(start_date, 'YYYY_MM');
-  
-  -- Check if partition already exists
-  SELECT EXISTS (
-    SELECT 1 FROM pg_class 
-    WHERE relname = partition_name
-  ) INTO partition_exists;
-  
-  IF partition_exists THEN
-    RETURN FALSE;
+  BEGIN
+    current_ip := current_setting('request.ip_address', true)::INET;
+  EXCEPTION WHEN OTHERS THEN
+    current_ip := NULL;
+  END;
+
+  BEGIN
+    current_user_agent := current_setting('request.user_agent', true);
+  EXCEPTION WHEN OTHERS THEN
+    current_user_agent := NULL;
+  END;
+
+  INSERT INTO audit_logs (
+    action_type,
+    entity_type,
+    entity_id,
+    user_id,
+    action_description,
+    old_values,
+    new_values,
+    metadata,
+    severity,
+    is_sensitive,
+    compliance_tags,
+    result,
+    success,
+    ip_address,
+    user_agent,
+    correlation_id
+  ) VALUES (
+    p_action_type,
+    p_entity_type,
+    p_entity_id,
+    auth.uid(),
+    p_description,
+    p_old_values,
+    p_new_values,
+    COALESCE(p_metadata, '{}'::jsonb),
+    p_severity,
+    p_is_sensitive,
+    COALESCE(p_compliance_tags, '{}'::text[]),
+    p_result,
+    (p_result = 'success'),
+    current_ip,
+    current_user_agent,
+    p_correlation_id
+  ) RETURNING id INTO audit_id;
+
+  RETURN audit_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Search helper
+CREATE OR REPLACE FUNCTION search_audit_logs(
+  p_search_query TEXT,
+  p_start_date TIMESTAMPTZ DEFAULT NULL,
+  p_end_date TIMESTAMPTZ DEFAULT NULL,
+  p_user_id UUID DEFAULT NULL,
+  p_action_types audit_event_type[] DEFAULT NULL,
+  p_entity_types audit_entity_type[] DEFAULT NULL,
+  p_severity audit_severity[] DEFAULT NULL,
+  p_limit INTEGER DEFAULT 100,
+  p_offset INTEGER DEFAULT 0
+)
+RETURNS TABLE (
+  id UUID,
+  action_type audit_event_type,
+  entity_type audit_entity_type,
+  entity_id UUID,
+  user_id UUID,
+  action_description TEXT,
+  event_timestamp TIMESTAMPTZ,
+  severity audit_severity,
+  result audit_result,
+  rank REAL
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    al.id,
+    al.action_type,
+    al.entity_type,
+    al.entity_id,
+    al.user_id,
+    al.action_description,
+    al.timestamp AS event_timestamp,
+    al.severity,
+    al.result,
+    ts_rank(si.search_vector, plainto_tsquery('english', p_search_query))
+  FROM audit_logs al
+  LEFT JOIN audit_log_search_index si ON al.id = si.audit_log_id
+  WHERE
+    (p_search_query IS NULL OR si.search_vector @@ plainto_tsquery('english', p_search_query))
+    AND (p_start_date IS NULL OR al.timestamp >= p_start_date)
+    AND (p_end_date IS NULL OR al.timestamp <= p_end_date)
+    AND (p_user_id IS NULL OR al.user_id = p_user_id)
+    AND (p_action_types IS NULL OR al.action_type = ANY(p_action_types))
+    AND (p_entity_types IS NULL OR al.entity_type = ANY(p_entity_types))
+    AND (p_severity IS NULL OR al.severity = ANY(p_severity))
+  ORDER BY al.timestamp DESC
+  LIMIT p_limit
+  OFFSET p_offset;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Automatic auditing for document table
+CREATE OR REPLACE FUNCTION audit_document_operations()
+RETURNS TRIGGER AS $$
+DECLARE
+  action_type_val audit_event_type;
+  description_val TEXT;
+  old_vals JSONB;
+  new_vals JSONB;
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    action_type_val := 'create';
+    description_val := 'Document created: ' || NEW.title;
+    new_vals := to_jsonb(NEW);
+  ELSIF TG_OP = 'UPDATE' THEN
+    action_type_val := 'update';
+    description_val := 'Document updated: ' || NEW.title;
+    old_vals := to_jsonb(OLD);
+    new_vals := to_jsonb(NEW);
+  ELSIF TG_OP = 'DELETE' THEN
+    action_type_val := 'delete';
+    description_val := 'Document deleted: ' || OLD.title;
+    old_vals := to_jsonb(OLD);
   END IF;
-  
-  -- Create the partition
-  EXECUTE format('CREATE TABLE %I PARTITION OF audit_logs 
-                  FOR VALUES FROM (%L) TO (%L)',
-                 partition_name, start_date, end_date);
-  
-  RETURN TRUE;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Function to automatically create next month's partition
-CREATE OR REPLACE FUNCTION ensure_audit_partitions()
-RETURNS void AS $$
-BEGIN
-  -- Create partition for next month
-  PERFORM create_monthly_audit_partition(CURRENT_DATE + INTERVAL '1 month');
-  -- Create partition for month after next (for safety)
-  PERFORM create_monthly_audit_partition(CURRENT_DATE + INTERVAL '2 months');
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+  PERFORM create_audit_log(
+    action_type_val,
+    'document',
+    COALESCE(NEW.id, OLD.id),
+    description_val,
+    old_vals,
+    new_vals,
+    jsonb_build_object(
+      'table', 'documents',
+      'operation', TG_OP,
+      'matter_id', COALESCE(NEW.matter_id, OLD.matter_id)
+    ),
+    'medium',
+    true,
+    ARRAY['document_management']
+  );
 
--- Generic audit logging function
+  RETURN COALESCE(NEW, OLD);
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER audit_documents_trigger
+  AFTER INSERT OR UPDATE OR DELETE ON documents
+  FOR EACH ROW
+  EXECUTE FUNCTION audit_document_operations();
+
+-- Legacy compatibility wrapper (used by early migrations)
 CREATE OR REPLACE FUNCTION log_audit_event(
   event_type_param audit_event_type,
   resource_name TEXT,
   action_name TEXT,
   result_status audit_result,
-  event_details JSONB DEFAULT '{}',
+  event_details JSONB DEFAULT '{}'::JSONB,
   target_user_id UUID DEFAULT NULL,
   before_data JSONB DEFAULT NULL,
   after_data JSONB DEFAULT NULL,
@@ -144,119 +450,91 @@ CREATE OR REPLACE FUNCTION log_audit_event(
 )
 RETURNS UUID AS $$
 DECLARE
-  audit_id UUID;
-  current_session_id UUID;
-  client_ip INET;
-  client_user_agent TEXT;
+  severity_mapped audit_severity;
+  description TEXT;
+  entity_mapping audit_entity_type;
 BEGIN
-  -- Try to get current session info (may be null for system events)
+  CASE severity_level
+    WHEN 'info' THEN severity_mapped := 'info';
+    WHEN 'warning' THEN severity_mapped := 'warning';
+    WHEN 'error' THEN severity_mapped := 'error';
+    WHEN 'critical' THEN severity_mapped := 'critical';
+    ELSE severity_mapped := severity_level;
+  END CASE;
+
+  description := format('%s: %s', resource_name, action_name);
+
   BEGIN
-    client_ip := inet_client_addr();
-    client_user_agent := current_setting('request.headers.user-agent', true);
+    entity_mapping := resource_name::audit_entity_type;
   EXCEPTION WHEN OTHERS THEN
-    client_ip := NULL;
-    client_user_agent := NULL;
+    entity_mapping := 'system';
   END;
-  
-  -- Insert audit log entry
-  INSERT INTO audit_logs (
-    user_id, 
-    actor_id, 
-    event_type, 
-    resource, 
-    action, 
-    result, 
-    details, 
-    before_state,
-    after_state,
-    ip_address,
-    user_agent,
-    severity
-  ) VALUES (
-    COALESCE(target_user_id, auth.uid()),
-    auth.uid(),
+
+  RETURN create_audit_log(
     event_type_param,
-    resource_name,
-    action_name, 
-    result_status,
-    event_details,
+    entity_mapping,
+    target_user_id,
+    description,
     before_data,
     after_data,
-    client_ip,
-    client_user_agent,
-    severity_level
-  ) RETURNING id INTO audit_id;
-  
-  RETURN audit_id;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Function to log authentication events
-CREATE OR REPLACE FUNCTION log_auth_event(
-  event_type_param audit_event_type,
-  result_status audit_result,
-  user_email TEXT DEFAULT NULL,
-  event_details JSONB DEFAULT '{}'
-)
-RETURNS UUID AS $$
-DECLARE
-  target_user_id UUID;
-  severity_level audit_severity;
-BEGIN
-  -- Get user ID from email if provided
-  IF user_email IS NOT NULL THEN
-    SELECT id INTO target_user_id FROM auth.users WHERE email = user_email LIMIT 1;
-  END IF;
-  
-  -- Set severity based on event type and result
-  severity_level := CASE 
-    WHEN event_type_param = 'auth_failed_login' THEN 'warning'
-    WHEN event_type_param = 'unauthorized_access_attempt' THEN 'error'
-    WHEN result_status = 'failure' THEN 'warning'
-    WHEN result_status = 'error' THEN 'error'
-    ELSE 'info'
-  END;
-  
-  RETURN log_audit_event(
-    event_type_param,
-    'authentication',
-    CASE event_type_param
-      WHEN 'auth_login' THEN 'user_login'
-      WHEN 'auth_logout' THEN 'user_logout'
-      WHEN 'auth_failed_login' THEN 'failed_login_attempt'
-      WHEN 'auth_mfa_setup' THEN 'mfa_enrollment'
-      WHEN 'auth_mfa_verify' THEN 'mfa_verification'
-      WHEN 'auth_password_change' THEN 'password_change'
-      ELSE event_type_param::TEXT
-    END,
+    event_details,
+    severity_mapped,
+    FALSE,
+    NULL,
     result_status,
-    event_details || jsonb_build_object('user_email', user_email),
-    target_user_id,
-    NULL,
-    NULL,
-    severity_level
+    NULL
   );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Function to cleanup old audit logs (run via cron)
+CREATE OR REPLACE FUNCTION log_auth_event(
+  event_type_param audit_event_type,
+  result_status audit_result,
+  user_email TEXT DEFAULT NULL,
+  event_details JSONB DEFAULT '{}'::JSONB
+)
+RETURNS UUID AS $$
+DECLARE
+  target_user UUID;
+  combined_details JSONB;
+BEGIN
+  SELECT id INTO target_user FROM auth.users WHERE email = user_email;
+  combined_details := event_details || jsonb_build_object('user_email', user_email);
+
+  RETURN log_audit_event(
+    event_type_param,
+    'authentication',
+    event_type_param::TEXT,
+    result_status,
+    combined_details,
+    target_user,
+    NULL,
+    NULL,
+    CASE
+      WHEN result_status = 'error' THEN 'error'
+      WHEN result_status = 'failure' THEN 'warning'
+      ELSE 'info'
+    END
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 CREATE OR REPLACE FUNCTION cleanup_expired_audit_logs()
 RETURNS INTEGER AS $$
 DECLARE
   deleted_count INTEGER;
 BEGIN
-  WITH deleted AS (
-    DELETE FROM audit_logs 
-    WHERE retained_until < NOW()
+  WITH removed AS (
+    DELETE FROM audit_logs
+    WHERE retention_until IS NOT NULL
+      AND retention_until < NOW()
     RETURNING id
   )
-  SELECT COUNT(*) INTO deleted_count FROM deleted;
-  
+  SELECT COUNT(*) INTO deleted_count FROM removed;
   RETURN deleted_count;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Function to get audit statistics
 CREATE OR REPLACE FUNCTION get_audit_statistics(
   start_date TIMESTAMPTZ DEFAULT NOW() - INTERVAL '30 days',
   end_date TIMESTAMPTZ DEFAULT NOW()
@@ -272,20 +550,17 @@ BEGIN
     'error_events', COUNT(*) FILTER (WHERE result = 'error'),
     'critical_events', COUNT(*) FILTER (WHERE severity = 'critical'),
     'unique_users', COUNT(DISTINCT user_id),
-    'unique_actors', COUNT(DISTINCT actor_id),
-    'event_types', jsonb_object_agg(
-      event_type::TEXT, 
-      COUNT(*) FILTER (WHERE event_type IS NOT NULL)
-    )
+    'action_breakdown', jsonb_object_agg(action_type::TEXT, COUNT(*))
   ) INTO stats
   FROM audit_logs
-  WHERE created_at BETWEEN start_date AND end_date;
-  
+  WHERE timestamp BETWEEN start_date AND end_date;
+
   RETURN stats;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Grant necessary permissions
 GRANT ALL ON audit_logs TO authenticated;
-GRANT ALL ON audit_logs_2025_01 TO authenticated;
-GRANT ALL ON audit_logs_2025_02 TO authenticated;
+GRANT ALL ON audit_log_attachments TO authenticated;
+GRANT ALL ON audit_log_search_index TO authenticated;
+
+COMMIT;

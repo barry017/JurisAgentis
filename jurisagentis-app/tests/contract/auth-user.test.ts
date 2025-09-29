@@ -14,7 +14,7 @@ describe('GET /api/auth/user - Contract Test', () => {
 
   describe('Authentication Required', () => {
     it('should reject requests without authentication token', async () => {
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'GET',
       })
 
@@ -26,7 +26,7 @@ describe('GET /api/auth/user - Contract Test', () => {
     })
 
     it('should reject requests with invalid authentication token', async () => {
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'GET',
         headers: {
           'Authorization': 'Bearer invalid-token',
@@ -42,7 +42,7 @@ describe('GET /api/auth/user - Contract Test', () => {
     it('should reject requests with expired authentication token', async () => {
       const expiredToken = 'expired-jwt-token'
       
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${expiredToken}`,
@@ -60,7 +60,7 @@ describe('GET /api/auth/user - Contract Test', () => {
     it('should return complete user profile for admin user', async () => {
       const adminToken = 'valid-admin-jwt-token'
       
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${adminToken}`,
@@ -75,17 +75,17 @@ describe('GET /api/auth/user - Contract Test', () => {
       expect(successResponse).toMatchObject({
         success: true,
         user: expect.objectContaining({
-          uid: expect.any(String),
-          email: expect.any(String),
+          uid: expect.any(String) as string,
+          email: expect.any(String) as string,
           role: 'admin',
           profile: expect.objectContaining({
-            firstName: expect.any(String),
-            lastName: expect.any(String),
-            title: expect.any(String),
+            firstName: expect.any(String) as string,
+            lastName: expect.any(String) as string,
+            title: expect.any(String) as string,
           }),
-          mfaEnabled: expect.any(Boolean),
+          mfaEnabled: expect.any(Boolean) as boolean,
           status: expect.stringMatching(/^(active|inactive|suspended)$/),
-          lastLogin: expect.any(String),
+          lastLogin: expect.any(String) as string,
         }),
         permissions: expect.objectContaining({
           financial: 'all',
@@ -94,10 +94,10 @@ describe('GET /api/auth/user - Contract Test', () => {
           administrative: 'all',
         }),
         session: expect.objectContaining({
-          sessionId: expect.any(String),
-          createdAt: expect.any(String),
-          lastActivity: expect.any(String),
-          expiresAt: expect.any(String),
+          sessionId: expect.any(String) as string,
+          createdAt: expect.any(String) as string,
+          lastActivity: expect.any(String) as string,
+          expiresAt: expect.any(String) as string,
         }),
       })
     })
@@ -105,7 +105,7 @@ describe('GET /api/auth/user - Contract Test', () => {
     it('should return limited user profile for client user', async () => {
       const clientToken = 'valid-client-jwt-token'
       
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${clientToken}`,
@@ -128,7 +128,7 @@ describe('GET /api/auth/user - Contract Test', () => {
     it('should return appropriate permissions for associate attorney', async () => {
       const attorneyToken = 'valid-associate-attorney-jwt-token'
       
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${attorneyToken}`,
@@ -151,7 +151,7 @@ describe('GET /api/auth/user - Contract Test', () => {
     it('should return appropriate permissions for paralegal', async () => {
       const paralegalToken = 'valid-paralegal-jwt-token'
       
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${paralegalToken}`,
@@ -174,7 +174,7 @@ describe('GET /api/auth/user - Contract Test', () => {
     it('should include temporary access information when granted', async () => {
       const tempAccessToken = 'valid-jwt-token-with-temp-access'
       
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${tempAccessToken}`,
@@ -187,11 +187,11 @@ describe('GET /api/auth/user - Contract Test', () => {
       
       expect(successResponse.user).toMatchObject({
         temporaryAccess: expect.objectContaining({
-          grantedBy: expect.any(String),
-          grantedAt: expect.any(String),
-          expiresAt: expect.any(String),
-          scope: expect.any(String),
-          justification: expect.any(String),
+          grantedBy: expect.any(String) as string,
+          grantedAt: expect.any(String) as string,
+          expiresAt: expect.any(String) as string,
+          scope: expect.any(String) as string,
+          justification: expect.any(String) as string,
         }),
       })
     })
@@ -199,7 +199,7 @@ describe('GET /api/auth/user - Contract Test', () => {
     it('should include session information', async () => {
       const validToken = 'valid-jwt-token'
       
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${validToken}`,
@@ -211,14 +211,14 @@ describe('GET /api/auth/user - Contract Test', () => {
       const successResponse = await response.json()
       
       expect(successResponse.session).toMatchObject({
-        sessionId: expect.any(String),
+        sessionId: expect.any(String) as string,
         createdAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/),
         lastActivity: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/),
         expiresAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/),
         deviceInfo: expect.objectContaining({
-          platform: expect.any(String),
-          browser: expect.any(String),
-          mobile: expect.any(Boolean),
+          platform: expect.any(String) as string,
+          browser: expect.any(String) as string,
+          mobile: expect.any(Boolean) as boolean,
         }),
         current: true,
       })
@@ -227,7 +227,7 @@ describe('GET /api/auth/user - Contract Test', () => {
     it('should not expose sensitive information', async () => {
       const validToken = 'valid-jwt-token'
       
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${validToken}`,
@@ -246,7 +246,7 @@ describe('GET /api/auth/user - Contract Test', () => {
 
   describe('HTTP Method Contract', () => {
     it('should reject POST requests', async () => {
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Authorization': 'Bearer valid-token',
@@ -259,7 +259,7 @@ describe('GET /api/auth/user - Contract Test', () => {
     })
 
     it('should reject PUT requests', async () => {
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'PUT',
         headers: {
           'Authorization': 'Bearer valid-token',
@@ -272,7 +272,7 @@ describe('GET /api/auth/user - Contract Test', () => {
     })
 
     it('should reject DELETE requests', async () => {
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'DELETE',
         headers: {
           'Authorization': 'Bearer valid-token',
@@ -287,7 +287,7 @@ describe('GET /api/auth/user - Contract Test', () => {
     it('should include security headers in response', async () => {
       const validToken = 'valid-jwt-token'
       
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${validToken}`,
@@ -304,7 +304,7 @@ describe('GET /api/auth/user - Contract Test', () => {
     it('should include CORS headers appropriately', async () => {
       const validToken = 'valid-jwt-token'
       
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${validToken}`,
@@ -317,7 +317,7 @@ describe('GET /api/auth/user - Contract Test', () => {
       expect([
         'https://jurisagentis.com',
         'https://dogwoodestateplanning.com',
-        'http://localhost:3000',
+        'http://localhost:3001',
         null
       ]).toContain(corsHeader)
     })
@@ -327,7 +327,7 @@ describe('GET /api/auth/user - Contract Test', () => {
     it('should include appropriate cache control headers', async () => {
       const validToken = 'valid-jwt-token'
       
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${validToken}`,
@@ -344,7 +344,7 @@ describe('GET /api/auth/user - Contract Test', () => {
     it('should include ETag for conditional requests', async () => {
       const validToken = 'valid-jwt-token'
       
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${validToken}`,
@@ -364,7 +364,7 @@ describe('GET /api/auth/user - Contract Test', () => {
       // Make many rapid requests
       for (let i = 0; i < 100; i++) {
         requests.push(
-          fetch(`http://localhost:3000${endpoint}`, {
+          fetch(`http://localhost:3001${endpoint}`, {
             method: 'GET',
             headers: {
               'Authorization': `Bearer ${validToken}`,
@@ -387,7 +387,7 @@ describe('GET /api/auth/user - Contract Test', () => {
 
   describe('Error Handling Contract', () => {
     it('should handle malformed authorization header', async () => {
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'GET',
         headers: {
           'Authorization': 'InvalidFormat',
@@ -401,7 +401,7 @@ describe('GET /api/auth/user - Contract Test', () => {
     })
 
     it('should handle missing Bearer prefix', async () => {
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'GET',
         headers: {
           'Authorization': 'some-token-without-bearer',

@@ -3,7 +3,7 @@
  */
 
 import { NextRequest } from 'next/server'
-import { supabaseServer, supabaseAdmin } from '@/lib/supabase'
+import { /* supabaseServer, */ supabaseAdmin } from '@/lib/supabase'
 import { 
   createSuccessResponse, 
   createErrorResponse, 
@@ -21,7 +21,7 @@ interface SendEmailRequest {
   subject: string
   content: string
   template?: string
-  template_data?: Record<string, any>
+  template_data?: Record<string, unknown>
   matter_id?: string
   client_id?: string
   priority: 'low' | 'normal' | 'high' | 'urgent'
@@ -47,7 +47,8 @@ interface EmailTemplate {
   is_active: boolean
 }
 
-interface EmailStatus {
+// Interface definition for future email status tracking functionality
+interface _EmailStatus {
   id: string
   to_address: string
   subject: string
@@ -298,8 +299,8 @@ Best regards,
 
     // In a real implementation, this would integrate with email service (SendGrid, AWS SES, etc.)
     // For development, we'll simulate email sending
-    let emailStatus = 'sent'
-    let deliveryInfo = {
+    const emailStatus = 'sent'
+    const deliveryInfo = {
       message_id: `msg-${Date.now()}`,
       provider: 'mock-provider',
       sent_at: new Date().toISOString()
@@ -327,7 +328,7 @@ Best regards,
             provider: deliveryInfo.provider
           })
           .eq('id', emailId)
-      } catch (updateError) {
+      } catch (_updateError) {
         // Ignore update errors in development mode
         console.log('Mock email status update (development mode)')
       }

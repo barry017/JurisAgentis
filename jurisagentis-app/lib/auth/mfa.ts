@@ -56,7 +56,7 @@ export function isTOTPCodeExpired(token: string, secret: string): boolean {
     }
     
     return !validTokens.includes(token)
-  } catch (error) {
+  } catch (_error) {
     return true // Consider expired if we can't verify
   }
 }

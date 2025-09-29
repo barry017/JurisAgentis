@@ -3,7 +3,7 @@
  */
 
 import { NextRequest } from 'next/server'
-import { supabaseServer, supabaseAdmin } from '@/lib/supabase'
+import { /* supabaseServer, */ supabaseAdmin } from '@/lib/supabase'
 import { 
   createSuccessResponse, 
   createErrorResponse, 
@@ -13,7 +13,7 @@ import {
   addCORSHeaders
 } from '@/lib/api/response'
 import { logAuditEvent } from '@/lib/auth/middleware'
-import { createClient } from '@supabase/supabase-js'
+// import { createClient } from '@supabase/supabase-js' // Unused import
 import crypto from 'crypto'
 
 interface PasswordResetRequest {

@@ -44,15 +44,15 @@ CREATE TABLE IF NOT EXISTS calendar_events (
     parent_event_id UUID REFERENCES calendar_events(id) ON DELETE CASCADE,
     
     -- Attendees and assignments
-    organizer_id UUID REFERENCES user_profiles(uid),
-    assigned_attorney UUID REFERENCES user_profiles(uid),
-    assigned_paralegal UUID REFERENCES user_profiles(uid),
-    created_by UUID NOT NULL REFERENCES user_profiles(uid),
+    organizer_id UUID REFERENCES user_profiles(id),
+    assigned_attorney UUID REFERENCES user_profiles(id),
+    assigned_paralegal UUID REFERENCES user_profiles(id),
+    created_by UUID NOT NULL REFERENCES user_profiles(id),
     
     -- Status and workflow
     status VARCHAR(50) DEFAULT 'scheduled', -- 'scheduled', 'confirmed', 'completed', 'cancelled', 'rescheduled', 'no_show'
     confirmation_required BOOLEAN DEFAULT false,
-    confirmed_by UUID REFERENCES user_profiles(uid),
+    confirmed_by UUID REFERENCES user_profiles(id),
     confirmed_at TIMESTAMP WITH TIME ZONE,
     
     -- Preparation and notes
@@ -105,9 +105,9 @@ CREATE TABLE IF NOT EXISTS calendar_events (
     -- Audit fields
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_by UUID NOT NULL REFERENCES user_profiles(uid),
+    updated_by UUID NOT NULL REFERENCES user_profiles(id),
     deleted_at TIMESTAMP WITH TIME ZONE,
-    deleted_by UUID REFERENCES user_profiles(uid)
+    deleted_by UUID REFERENCES user_profiles(id)
 );
 
 -- Event attendees/participants table
@@ -119,7 +119,7 @@ CREATE TABLE IF NOT EXISTS event_attendees (
     attendee_type VARCHAR(50) NOT NULL, -- 'internal_staff', 'client', 'opposing_counsel', 'witness', 'expert', 'court_reporter', 'interpreter', 'other'
     
     -- Internal staff
-    user_id UUID REFERENCES user_profiles(uid),
+    user_id UUID REFERENCES user_profiles(id),
     
     -- External attendees
     name VARCHAR(200),
@@ -160,7 +160,7 @@ CREATE TABLE IF NOT EXISTS event_attendees (
     
     -- Audit fields
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    created_by UUID NOT NULL REFERENCES user_profiles(uid)
+    created_by UUID REFERENCES user_profiles(id) ON DELETE SET NULL
 );
 
 -- Court calendar and rule tracking
@@ -212,8 +212,8 @@ CREATE TABLE IF NOT EXISTS court_calendars (
     -- Audit fields
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    created_by UUID NOT NULL REFERENCES user_profiles(uid),
-    updated_by UUID NOT NULL REFERENCES user_profiles(uid)
+    created_by UUID NOT NULL REFERENCES user_profiles(id),
+    updated_by UUID NOT NULL REFERENCES user_profiles(id)
 );
 
 -- Deadline calculation rules and templates
@@ -273,8 +273,8 @@ CREATE TABLE IF NOT EXISTS deadline_rules (
     -- Audit fields
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    created_by UUID NOT NULL REFERENCES user_profiles(uid),
-    updated_by UUID NOT NULL REFERENCES user_profiles(uid)
+    created_by UUID NOT NULL REFERENCES user_profiles(id),
+    updated_by UUID NOT NULL REFERENCES user_profiles(id)
 );
 
 -- Holiday calendar for deadline calculations
@@ -309,13 +309,25 @@ CREATE TABLE IF NOT EXISTS holidays (
     
     -- Audit fields
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    created_by UUID NOT NULL REFERENCES user_profiles(uid)
+    created_by UUID REFERENCES user_profiles(id) ON DELETE SET NULL
 );
+
+-- Ensure legacy deployments allow system-seeded holidays without author assignment
+ALTER TABLE holidays
+    ALTER COLUMN created_by DROP NOT NULL;
+
+-- Align foreign key with nullable created_by
+ALTER TABLE holidays
+    DROP CONSTRAINT IF EXISTS holidays_created_by_fkey;
+
+ALTER TABLE holidays
+    ADD CONSTRAINT holidays_created_by_fkey
+    FOREIGN KEY (created_by) REFERENCES user_profiles(id) ON DELETE SET NULL;
 
 -- Calendar preferences and settings per user
 CREATE TABLE IF NOT EXISTS calendar_preferences (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES user_profiles(uid) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
     
     -- Display preferences
     default_view VARCHAR(50) DEFAULT 'week', -- 'day', 'week', 'month', 'agenda'
@@ -404,7 +416,7 @@ CREATE OR REPLACE FUNCTION calculate_business_days(
 RETURNS INTEGER AS $$
 DECLARE
     business_days INTEGER := 0;
-    current_date DATE := start_date;
+    current_day DATE := start_date;
     holiday_dates DATE[];
 BEGIN
     -- Get applicable holidays if excluding them
@@ -418,15 +430,15 @@ BEGIN
     END IF;
     
     -- Count business days
-    WHILE current_date <= end_date LOOP
+    WHILE current_day <= end_date LOOP
         -- Check if it's a weekday (Monday=1, Sunday=7)
-        IF EXTRACT(DOW FROM current_date) BETWEEN 1 AND 5 THEN
+        IF EXTRACT(DOW FROM current_day) BETWEEN 1 AND 5 THEN
             -- Check if it's not a holiday
-            IF NOT exclude_holidays OR holiday_dates IS NULL OR NOT (current_date = ANY(holiday_dates)) THEN
+            IF NOT exclude_holidays OR holiday_dates IS NULL OR NOT (current_day = ANY(holiday_dates)) THEN
                 business_days := business_days + 1;
             END IF;
         END IF;
-        current_date := current_date + INTERVAL '1 day';
+        current_day := current_day + INTERVAL '1 day';
     END LOOP;
     
     RETURN business_days;
@@ -444,7 +456,7 @@ RETURNS DATE AS $$
 DECLARE
     deadline_date DATE;
     days_added INTEGER := 0;
-    current_date DATE := trigger_date;
+    current_day DATE := trigger_date;
     holiday_dates DATE[];
 BEGIN
     -- Get applicable holidays
@@ -456,25 +468,25 @@ BEGIN
     AND is_active = true;
     
     WHILE days_added < deadline_days LOOP
-        current_date := current_date + INTERVAL '1 day';
+        current_day := current_day + INTERVAL '1 day';
         
         IF business_days_only THEN
             -- Only count weekdays
-            IF EXTRACT(DOW FROM current_date) BETWEEN 1 AND 5 THEN
+            IF EXTRACT(DOW FROM current_day) BETWEEN 1 AND 5 THEN
                 -- Check if it's not a holiday
-                IF holiday_dates IS NULL OR NOT (current_date = ANY(holiday_dates)) THEN
+                IF holiday_dates IS NULL OR NOT (current_day = ANY(holiday_dates)) THEN
                     days_added := days_added + 1;
                 END IF;
             END IF;
         ELSE
             -- Count all days except holidays
-            IF holiday_dates IS NULL OR NOT (current_date = ANY(holiday_dates)) THEN
+            IF holiday_dates IS NULL OR NOT (current_day = ANY(holiday_dates)) THEN
                 days_added := days_added + 1;
             END IF;
         END IF;
     END LOOP;
     
-    RETURN current_date;
+    RETURN current_day;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -538,15 +550,26 @@ CREATE TRIGGER trigger_update_event_reminders
     EXECUTE FUNCTION update_event_reminders();
 
 -- Populate federal holidays for current and next year
-INSERT INTO holidays (holiday_name, holiday_type, jurisdiction, holiday_date, year, is_recurring, recurrence_pattern, month_number, day_number) VALUES
-('New Year''s Day', 'federal', 'federal', '2025-01-01', 2025, true, 'fixed_date', 1, 1),
-('Martin Luther King Jr. Day', 'federal', 'federal', '2025-01-20', 2025, true, 'nth_weekday', 1, 1, 3),
-('Presidents'' Day', 'federal', 'federal', '2025-02-17', 2025, true, 'nth_weekday', 2, 1, 3),
-('Memorial Day', 'federal', 'federal', '2025-05-26', 2025, true, 'last_weekday', 5, 1, -1),
-('Independence Day', 'federal', 'federal', '2025-07-04', 2025, true, 'fixed_date', 7, 4),
-('Labor Day', 'federal', 'federal', '2025-09-01', 2025, true, 'nth_weekday', 9, 1, 1),
-('Columbus Day', 'federal', 'federal', '2025-10-13', 2025, true, 'nth_weekday', 10, 1, 2),
-('Veterans Day', 'federal', 'federal', '2025-11-11', 2025, true, 'fixed_date', 11, 11),
-('Thanksgiving Day', 'federal', 'federal', '2025-11-27', 2025, true, 'nth_weekday', 11, 4, 4),
-('Christmas Day', 'federal', 'federal', '2025-12-25', 2025, true, 'fixed_date', 12, 25)
-ON CONFLICT (rule_code) DO NOTHING;
+INSERT INTO holidays (
+  holiday_name,
+  holiday_type,
+  jurisdiction,
+  holiday_date,
+  year,
+  is_recurring,
+  recurrence_pattern,
+  month_number,
+  day_number,
+  week_of_month
+) VALUES
+  ('New Year''s Day', 'federal', 'federal', '2025-01-01', 2025, true, 'fixed_date', 1, 1, NULL),
+  ('Martin Luther King Jr. Day', 'federal', 'federal', '2025-01-20', 2025, true, 'nth_weekday', 1, 1, 3),
+  ('Presidents'' Day', 'federal', 'federal', '2025-02-17', 2025, true, 'nth_weekday', 2, 1, 3),
+  ('Memorial Day', 'federal', 'federal', '2025-05-26', 2025, true, 'last_weekday', 5, 1, -1),
+  ('Independence Day', 'federal', 'federal', '2025-07-04', 2025, true, 'fixed_date', 7, 4, NULL),
+  ('Labor Day', 'federal', 'federal', '2025-09-01', 2025, true, 'nth_weekday', 9, 1, 1),
+  ('Columbus Day', 'federal', 'federal', '2025-10-13', 2025, true, 'nth_weekday', 10, 1, 2),
+  ('Veterans Day', 'federal', 'federal', '2025-11-11', 2025, true, 'fixed_date', 11, 11, NULL),
+  ('Thanksgiving Day', 'federal', 'federal', '2025-11-27', 2025, true, 'nth_weekday', 11, 4, 4),
+  ('Christmas Day', 'federal', 'federal', '2025-12-25', 2025, true, 'fixed_date', 12, 25, NULL)
+ON CONFLICT DO NOTHING;

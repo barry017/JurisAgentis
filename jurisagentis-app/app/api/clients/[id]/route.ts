@@ -3,7 +3,7 @@
  */
 
 import { NextRequest } from 'next/server'
-import { supabaseServer, supabaseAdmin } from '@/lib/supabase'
+import { /* supabaseServer, */ supabaseAdmin } from '@/lib/supabase'
 import { 
   createSuccessResponse, 
   createErrorResponse, 
@@ -47,9 +47,10 @@ interface UpdateClientRequest {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id: clientId } = await params
     // Get authenticated user
     const user = await getUserProfile(request)
     
@@ -62,16 +63,116 @@ export async function GET(
       ))
     }
 
-    const clientId = params.id
-
-    // Validate UUID format
+    // Development mode: Allow mock client IDs
+    const isDevelopment = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test'
+    
+    // Validate UUID format (skip for mock IDs in development)
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-    if (!uuidRegex.test(clientId)) {
+    const isMockId = isDevelopment && clientId.startsWith('client-')
+    
+    if (!uuidRegex.test(clientId) && !isMockId) {
       return addCORSHeaders(createErrorResponse(
         'INVALID_CLIENT_ID',
         'Client ID must be a valid UUID',
         400
       ))
+    }
+
+    // Handle mock data in development
+    if (isMockId) {
+      const mockClients = {
+        'client-1': {
+          id: 'client-1',
+          first_name: 'John',
+          last_name: 'Johnson',
+          preferred_name: null,
+          email: 'john.johnson@example.com',
+          phone_primary: '(555) 123-4567',
+          client_status: 'active',
+          client_type: 'individual',
+          business_name: null,
+          practice_areas: ['Estate Planning', 'Wills'],
+          tags: ['high-priority'],
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          date_of_birth: '1975-03-15',
+          address_line1: '123 Main St',
+          city: 'Anytown',
+          state: 'CA',
+          zip_code: '90210',
+          country: 'United States',
+          notes: 'Long-time client, prefers email communication',
+          client_contacts: []
+        },
+        'client-2': {
+          id: 'client-2',
+          first_name: 'Jane',
+          last_name: 'Doe',
+          preferred_name: null,
+          email: 'jane.doe@business.com',
+          phone_primary: '(555) 987-6543',
+          client_status: 'active',
+          client_type: 'business',
+          business_name: 'ABC Corporation',
+          business_type: 'LLC',
+          practice_areas: ['Corporate Law'],
+          tags: ['corporate'],
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          address_line1: '456 Business Ave',
+          city: 'Corporate City',
+          state: 'NY',
+          zip_code: '10001',
+          country: 'United States',
+          notes: 'Corporate client, requires formal communication',
+          client_contacts: []
+        },
+        'client-3': {
+          id: 'client-3',
+          first_name: 'Robert',
+          last_name: 'Williams',
+          preferred_name: 'Bob',
+          email: 'bob.williams@email.com',
+          phone_primary: '(555) 555-1234',
+          client_status: 'prospect',
+          client_type: 'individual',
+          business_name: null,
+          practice_areas: ['Family Law'],
+          tags: ['new-inquiry'],
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          date_of_birth: '1982-07-22',
+          address_line1: '789 Oak Street',
+          city: 'Hometown',
+          state: 'TX',
+          zip_code: '73301',
+          country: 'United States',
+          notes: 'Initial consultation completed, waiting for decision',
+          client_contacts: []
+        }
+      }
+
+      const client = mockClients[clientId as keyof typeof mockClients]
+      if (!client) {
+        return addCORSHeaders(createErrorResponse(
+          'CLIENT_NOT_FOUND',
+          'Client not found',
+          404
+        ))
+      }
+
+      console.log('Database connection failed, using mock client data')
+      
+      // Log audit event
+      await logAuditEvent(
+        'data_access',
+        'clients',
+        'view',
+        'success',
+        { client_id: clientId }
+      )
+
+      return addCORSHeaders(createSuccessResponse({ client }))
     }
 
     // Get client with related data
@@ -158,9 +259,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id: clientId } = await params
     // Validate content type
     const contentTypeError = validateContentType(request)
     if (contentTypeError) {
@@ -178,8 +280,6 @@ export async function PUT(
         403
       ))
     }
-
-    const clientId = params.id
 
     // Validate UUID format
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -303,8 +403,8 @@ export async function PUT(
 
     // Remove undefined values
     Object.keys(clientUpdate).forEach(key => {
-      if ((clientUpdate as any)[key] === undefined) {
-        delete (clientUpdate as any)[key]
+      if ((clientUpdate as Record<string, unknown>)[key] === undefined) {
+        delete (clientUpdate as Record<string, unknown>)[key]
       }
     })
 
@@ -361,9 +461,10 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id: clientId } = await params
     // Get authenticated user
     const user = await getUserProfile(request)
     
@@ -375,8 +476,6 @@ export async function DELETE(
         403
       ))
     }
-
-    const clientId = params.id
 
     // Validate UUID format
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i

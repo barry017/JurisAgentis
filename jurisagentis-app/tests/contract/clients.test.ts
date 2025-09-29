@@ -4,10 +4,9 @@
  * Tests the clients API endpoints (/api/clients)
  */
 
-import { NextRequest } from 'next/server'
 
 describe('Clients API - Contract Tests', () => {
-  const baseUrl = 'http://localhost:3000'
+  const baseUrl = 'http://localhost:3001'
   let validToken: string
 
   beforeAll(async () => {
@@ -93,7 +92,7 @@ describe('Clients API - Contract Tests', () => {
       expect(data.success).toBe(true)
       
       // All returned clients should have active status
-      data.data.clients.forEach((client: any) => {
+      data.data.clients.forEach((client: unknown) => {
         expect(client.client_status).toBe('active')
       })
     })
@@ -111,7 +110,7 @@ describe('Clients API - Contract Tests', () => {
       expect(data.success).toBe(true)
       
       // All returned clients should have business type
-      data.data.clients.forEach((client: any) => {
+      data.data.clients.forEach((client: unknown) => {
         expect(client.client_type).toBe('business')
       })
     })
@@ -130,7 +129,7 @@ describe('Clients API - Contract Tests', () => {
       
       // Results should contain clients matching the search term
       if (data.data.clients.length > 0) {
-        const hasMatch = data.data.clients.some((client: any) => 
+        const hasMatch = data.data.clients.some((client: unknown) => 
           client.first_name.toLowerCase().includes('john') ||
           client.last_name.toLowerCase().includes('john') ||
           (client.preferred_name && client.preferred_name.toLowerCase().includes('john'))

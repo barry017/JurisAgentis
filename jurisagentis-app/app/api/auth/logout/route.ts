@@ -57,6 +57,7 @@ export async function POST(request: NextRequest) {
         allSessions = body.allSessions === true
       }
     } catch (parseError) {
+      console.error('Body parsing failed:', parseError)
       // If body parsing fails but we have content, return error
       const contentLength = request.headers.get('content-length')
       if (contentLength && parseInt(contentLength) > 0) {

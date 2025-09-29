@@ -6,8 +6,9 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
 import { 
   ClipboardDocumentListIcon,
   ArrowLeftIcon,
@@ -16,11 +17,8 @@ import {
   SparklesIcon,
   ClockIcon,
   CurrencyDollarIcon,
-  CalendarDaysIcon,
-  UserIcon,
   InformationCircleIcon,
-  PlusIcon,
-  DocumentTextIcon
+  PlusIcon
 } from '@heroicons/react/24/outline'
 
 interface TaskTemplate {
@@ -265,7 +263,7 @@ export default function NewTaskPage() {
     setShowTemplates(false)
   }
 
-  const handleInputChange = (field: keyof TaskFormData, value: any) => {
+  const handleInputChange = (field: keyof TaskFormData, value: string | number | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
@@ -316,10 +314,11 @@ export default function NewTaskPage() {
         checklist_items: formData.checklist_items.length > 0 ? formData.checklist_items : null
       }
 
+      const { data: { session } } = await supabase.auth.getSession()
       const response = await fetch('/api/tasks', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer mock-token-development`,
+          ...(session?.access_token && { 'Authorization': `Bearer ${session.access_token}` }),
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(taskData)

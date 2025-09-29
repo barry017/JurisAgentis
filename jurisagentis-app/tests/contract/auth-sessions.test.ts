@@ -14,7 +14,7 @@ describe('GET /api/auth/sessions - Contract Test', () => {
 
   describe('Authentication Required', () => {
     it('should reject requests without authentication token', async () => {
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'GET',
       })
 
@@ -26,7 +26,7 @@ describe('GET /api/auth/sessions - Contract Test', () => {
     })
 
     it('should reject requests with invalid authentication token', async () => {
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'GET',
         headers: {
           'Authorization': 'Bearer invalid-token',
@@ -44,7 +44,7 @@ describe('GET /api/auth/sessions - Contract Test', () => {
     it('should return user sessions list', async () => {
       const validToken = 'valid-jwt-token'
       
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${validToken}`,
@@ -59,16 +59,16 @@ describe('GET /api/auth/sessions - Contract Test', () => {
         success: true,
         sessions: expect.arrayContaining([
           expect.objectContaining({
-            sessionId: expect.any(String),
-            createdAt: expect.any(String),
-            lastActivity: expect.any(String),
-            expiresAt: expect.any(String),
+            sessionId: expect.any(String) as string,
+            createdAt: expect.any(String) as string,
+            lastActivity: expect.any(String) as string,
+            expiresAt: expect.any(String) as string,
             deviceInfo: expect.objectContaining({
-              platform: expect.any(String),
-              browser: expect.any(String),
-              mobile: expect.any(Boolean),
+              platform: expect.any(String) as string,
+              browser: expect.any(String) as string,
+              mobile: expect.any(Boolean) as boolean,
             }),
-            current: expect.any(Boolean),
+            current: expect.any(Boolean) as boolean,
           })
         ]),
         total: expect.any(Number),
@@ -78,7 +78,7 @@ describe('GET /api/auth/sessions - Contract Test', () => {
     it('should mark current session appropriately', async () => {
       const validToken = 'valid-jwt-token'
       
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${validToken}`,
@@ -88,7 +88,7 @@ describe('GET /api/auth/sessions - Contract Test', () => {
       expect(response.status).toBe(200)
       
       const successResponse = await response.json()
-      const currentSessions = successResponse.sessions.filter((s: any) => s.current === true)
+      const currentSessions = successResponse.sessions.filter((s: unknown) => s.current === true)
       
       // Should have exactly one current session
       expect(currentSessions).toHaveLength(1)
@@ -97,7 +97,7 @@ describe('GET /api/auth/sessions - Contract Test', () => {
     it('should include session pagination', async () => {
       const validToken = 'valid-jwt-token'
       
-      const response = await fetch(`http://localhost:3000${endpoint}?limit=5&offset=0`, {
+      const response = await fetch(`http://localhost:3001${endpoint}?limit=5&offset=0`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${validToken}`,
@@ -120,7 +120,7 @@ describe('GET /api/auth/sessions - Contract Test', () => {
     it('should sort sessions by lastActivity descending', async () => {
       const validToken = 'valid-jwt-token'
       
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${validToken}`,
@@ -144,7 +144,7 @@ describe('GET /api/auth/sessions - Contract Test', () => {
 
   describe('HTTP Method Contract', () => {
     it('should reject POST requests', async () => {
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: {
           'Authorization': 'Bearer valid-token',
@@ -157,7 +157,7 @@ describe('GET /api/auth/sessions - Contract Test', () => {
     })
 
     it('should reject PUT requests', async () => {
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'PUT',
         headers: {
           'Authorization': 'Bearer valid-token',
@@ -170,7 +170,7 @@ describe('GET /api/auth/sessions - Contract Test', () => {
     })
 
     it('should reject DELETE requests', async () => {
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'DELETE',
         headers: {
           'Authorization': 'Bearer valid-token',
@@ -185,7 +185,7 @@ describe('GET /api/auth/sessions - Contract Test', () => {
     it('should include security headers in response', async () => {
       const validToken = 'valid-jwt-token'
       
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${validToken}`,
@@ -203,7 +203,7 @@ describe('GET /api/auth/sessions - Contract Test', () => {
     it('should handle limit parameter', async () => {
       const validToken = 'valid-jwt-token'
       
-      const response = await fetch(`http://localhost:3000${endpoint}?limit=3`, {
+      const response = await fetch(`http://localhost:3001${endpoint}?limit=3`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${validToken}`,
@@ -219,7 +219,7 @@ describe('GET /api/auth/sessions - Contract Test', () => {
     it('should handle offset parameter', async () => {
       const validToken = 'valid-jwt-token'
       
-      const response = await fetch(`http://localhost:3000${endpoint}?offset=10`, {
+      const response = await fetch(`http://localhost:3001${endpoint}?offset=10`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${validToken}`,
@@ -235,7 +235,7 @@ describe('GET /api/auth/sessions - Contract Test', () => {
     it('should validate limit parameter range', async () => {
       const validToken = 'valid-jwt-token'
       
-      const response = await fetch(`http://localhost:3000${endpoint}?limit=1000`, {
+      const response = await fetch(`http://localhost:3001${endpoint}?limit=1000`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${validToken}`,
@@ -251,7 +251,7 @@ describe('GET /api/auth/sessions - Contract Test', () => {
     it('should validate offset parameter', async () => {
       const validToken = 'valid-jwt-token'
       
-      const response = await fetch(`http://localhost:3000${endpoint}?offset=-1`, {
+      const response = await fetch(`http://localhost:3001${endpoint}?offset=-1`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${validToken}`,
@@ -284,7 +284,7 @@ describe('DELETE /api/auth/sessions/{id} - Contract Test', () => {
     it('should reject requests without authentication token', async () => {
       const sessionId = 'test-session-id'
       
-      const response = await fetch(`http://localhost:3000${getEndpoint(sessionId)}`, {
+      const response = await fetch(`http://localhost:3001${getEndpoint(sessionId)}`, {
         method: 'DELETE',
       })
 
@@ -301,7 +301,7 @@ describe('DELETE /api/auth/sessions/{id} - Contract Test', () => {
       const validToken = 'valid-jwt-token'
       const sessionId = 'valid-session-id'
       
-      const response = await fetch(`http://localhost:3000${getEndpoint(sessionId)}`, {
+      const response = await fetch(`http://localhost:3001${getEndpoint(sessionId)}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${validToken}`,
@@ -315,7 +315,7 @@ describe('DELETE /api/auth/sessions/{id} - Contract Test', () => {
       const validToken = 'valid-jwt-token'
       const invalidSessionId = 'invalid-format'
       
-      const response = await fetch(`http://localhost:3000${getEndpoint(invalidSessionId)}`, {
+      const response = await fetch(`http://localhost:3001${getEndpoint(invalidSessionId)}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${validToken}`,
@@ -332,7 +332,7 @@ describe('DELETE /api/auth/sessions/{id} - Contract Test', () => {
       const validToken = 'valid-jwt-token'
       const nonExistentSessionId = 'non-existent-session-id'
       
-      const response = await fetch(`http://localhost:3000${getEndpoint(nonExistentSessionId)}`, {
+      const response = await fetch(`http://localhost:3001${getEndpoint(nonExistentSessionId)}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${validToken}`,
@@ -349,7 +349,7 @@ describe('DELETE /api/auth/sessions/{id} - Contract Test', () => {
       const validToken = 'valid-jwt-token'
       const otherUserSessionId = 'other-user-session-id'
       
-      const response = await fetch(`http://localhost:3000${getEndpoint(otherUserSessionId)}`, {
+      const response = await fetch(`http://localhost:3001${getEndpoint(otherUserSessionId)}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${validToken}`,
@@ -368,7 +368,7 @@ describe('DELETE /api/auth/sessions/{id} - Contract Test', () => {
       const validToken = 'valid-jwt-token'
       const sessionId = 'valid-session-id'
       
-      const response = await fetch(`http://localhost:3000${getEndpoint(sessionId)}`, {
+      const response = await fetch(`http://localhost:3001${getEndpoint(sessionId)}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${validToken}`,
@@ -390,7 +390,7 @@ describe('DELETE /api/auth/sessions/{id} - Contract Test', () => {
       const validToken = 'valid-jwt-token'
       const currentSessionId = 'current-session-id'
       
-      const response = await fetch(`http://localhost:3000${getEndpoint(currentSessionId)}`, {
+      const response = await fetch(`http://localhost:3001${getEndpoint(currentSessionId)}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${validToken}`,
@@ -408,7 +408,7 @@ describe('DELETE /api/auth/sessions/{id} - Contract Test', () => {
     it('should reject GET requests', async () => {
       const sessionId = 'test-session-id'
       
-      const response = await fetch(`http://localhost:3000${getEndpoint(sessionId)}`, {
+      const response = await fetch(`http://localhost:3001${getEndpoint(sessionId)}`, {
         method: 'GET',
         headers: {
           'Authorization': 'Bearer valid-token',
@@ -421,7 +421,7 @@ describe('DELETE /api/auth/sessions/{id} - Contract Test', () => {
     it('should reject POST requests', async () => {
       const sessionId = 'test-session-id'
       
-      const response = await fetch(`http://localhost:3000${getEndpoint(sessionId)}`, {
+      const response = await fetch(`http://localhost:3001${getEndpoint(sessionId)}`, {
         method: 'POST',
         headers: {
           'Authorization': 'Bearer valid-token',
@@ -439,7 +439,7 @@ describe('DELETE /api/auth/sessions/{id} - Contract Test', () => {
       const validToken = 'valid-jwt-token'
       const sessionId = 'valid-session-id'
       
-      const response = await fetch(`http://localhost:3000${getEndpoint(sessionId)}`, {
+      const response = await fetch(`http://localhost:3001${getEndpoint(sessionId)}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${validToken}`,
@@ -456,7 +456,7 @@ describe('DELETE /api/auth/sessions/{id} - Contract Test', () => {
       const validToken = 'valid-jwt-token'
       const sessionId = 'valid-session-id'
       
-      const response = await fetch(`http://localhost:3000${getEndpoint(sessionId)}`, {
+      const response = await fetch(`http://localhost:3001${getEndpoint(sessionId)}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${validToken}`,

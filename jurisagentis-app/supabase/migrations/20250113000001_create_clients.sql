@@ -60,12 +60,12 @@ CREATE TABLE IF NOT EXISTS clients (
   -- Metadata
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  created_by UUID NOT NULL REFERENCES user_profiles(uid),
-  updated_by UUID NOT NULL REFERENCES user_profiles(uid),
+  created_by UUID NOT NULL REFERENCES user_profiles(id),
+  updated_by UUID NOT NULL REFERENCES user_profiles(id),
   
   -- Soft delete
   deleted_at TIMESTAMP,
-  deleted_by UUID REFERENCES user_profiles(uid)
+  deleted_by UUID REFERENCES user_profiles(id)
 );
 
 -- Create indexes for efficient queries
@@ -125,7 +125,7 @@ CREATE TABLE IF NOT EXISTS client_contacts (
   -- Metadata
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  created_by UUID NOT NULL REFERENCES user_profiles(uid),
+  created_by UUID NOT NULL REFERENCES user_profiles(id),
   
   -- Soft delete
   deleted_at TIMESTAMP

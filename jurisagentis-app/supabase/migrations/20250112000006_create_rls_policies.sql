@@ -115,7 +115,7 @@ CREATE OR REPLACE FUNCTION grant_temporary_access(
   target_user_id UUID,
   access_scope TEXT,
   duration_hours INTEGER DEFAULT 24,
-  justification TEXT
+  justification TEXT DEFAULT 'Temporary access granted'
 )
 RETURNS BOOLEAN AS $$
 DECLARE

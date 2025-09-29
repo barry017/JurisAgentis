@@ -109,26 +109,10 @@ export default function NewMatterPage() {
   // Check permissions
   const canCreateMatters = user && ['admin', 'associate_attorney', 'paralegal'].includes(user.role)
 
-  if (!canCreateMatters) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <ExclamationTriangleIcon className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h2>
-          <p className="text-gray-600 mb-4">You don't have permission to create new matters.</p>
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="btn-primary"
-          >
-            Return to Dashboard
-          </button>
-        </div>
-      </div>
-    )
-  }
-
   // Load clients and attorneys
   useEffect(() => {
+    if (!canCreateMatters) return
+    
     const loadData = async () => {
       try {
         // Load clients
@@ -152,7 +136,26 @@ export default function NewMatterPage() {
     }
 
     loadData()
-  }, [])
+  }, [canCreateMatters])
+
+  if (!canCreateMatters) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <ExclamationTriangleIcon className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h2>
+          <p className="text-gray-600 mb-4">You don&apos;t have permission to create new matters.</p>
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="btn-primary"
+          >
+            Return to Dashboard
+          </button>
+        </div>
+      </div>
+    )
+  }
+
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target
@@ -423,7 +426,7 @@ export default function NewMatterPage() {
 
                 {filteredClients.length === 0 && clientSearch && (
                   <p className="text-sm text-gray-500 mt-2">
-                    No clients found matching "{clientSearch}". 
+                    No clients found matching &quot;{clientSearch}&quot;. 
                     <button
                       type="button"
                       onClick={() => router.push('/clients/new')}

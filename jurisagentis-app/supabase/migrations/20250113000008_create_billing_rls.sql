@@ -42,8 +42,8 @@ DECLARE
   user_id UUID;
 BEGIN
   -- Get current user info
-  SELECT auth.jwt() ->> 'sub' INTO user_id;
-  SELECT role FROM user_profiles WHERE uid = user_id::UUID INTO user_role;
+  user_id := (auth.jwt() ->> 'sub')::UUID;
+  user_role := get_user_role(user_id);
   
   -- Admin has full access to all billing
   IF user_role = 'admin' THEN
@@ -74,8 +74,7 @@ BEGIN
       JOIN clients c ON m.client_id = c.id
       JOIN user_profiles up ON c.email = up.email
       WHERE m.id = matter_id_param 
-      AND up.uid = user_id::UUID
-      AND up.role = 'client'
+      AND up.id = user_id
       AND m.deleted_at IS NULL
       AND c.deleted_at IS NULL
     );
@@ -93,9 +92,7 @@ DECLARE
   user_permissions JSONB;
   financial_access TEXT;
 BEGIN
-  SELECT role FROM user_profiles 
-  WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-  INTO user_role;
+  user_role := get_user_role((auth.jwt() ->> 'sub')::UUID);
   
   -- Get user permissions
   SELECT get_user_permissions((auth.jwt() ->> 'sub')::UUID) INTO user_permissions;
@@ -129,19 +126,11 @@ CREATE POLICY "Fee Schedules - Admin/Attorney full access" ON fee_schedules
   FOR ALL 
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role IN ('admin', 'associate_attorney')
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) IN ('admin', 'associate_attorney')
     AND user_has_financial_access('limited')
   )
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role IN ('admin', 'associate_attorney')
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) IN ('admin', 'associate_attorney')
   );
 
 -- Paralegal/Assistant: Read-only access to active fee schedules
@@ -149,11 +138,7 @@ CREATE POLICY "Fee Schedules - Paralegal/Assistant read" ON fee_schedules
   FOR SELECT 
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role IN ('paralegal', 'assistant')
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) IN ('paralegal', 'assistant')
     AND is_active = true
   );
 
@@ -164,18 +149,10 @@ CREATE POLICY "Matter Billing - Admin full access" ON matter_billing
   FOR ALL 
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role = 'admin'
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) = 'admin'
   )
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role = 'admin'
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) = 'admin'
   );
 
 -- Attorney/Paralegal: Read/write access to billing for assigned matters
@@ -183,20 +160,12 @@ CREATE POLICY "Matter Billing - Attorney/Paralegal read/write assigned" ON matte
   FOR ALL 
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role IN ('associate_attorney', 'paralegal')
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) IN ('associate_attorney', 'paralegal')
     AND user_has_billing_access(matter_id, 'write')
     AND user_has_financial_access('limited')
   )
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role IN ('associate_attorney', 'paralegal')
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) IN ('associate_attorney', 'paralegal')
     AND user_has_billing_access(matter_id, 'write')
   );
 
@@ -205,11 +174,7 @@ CREATE POLICY "Matter Billing - Assistant read assigned" ON matter_billing
   FOR SELECT 
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role = 'assistant'
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) = 'assistant'
     AND user_has_billing_access(matter_id, 'read')
     AND user_has_financial_access('client_only')
   );
@@ -221,19 +186,11 @@ CREATE POLICY "Invoices - Admin full access" ON invoices
   FOR ALL 
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role = 'admin'
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) = 'admin'
     AND deleted_at IS NULL
   )
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role = 'admin'
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) = 'admin'
   );
 
 -- Attorney/Paralegal: Read/write access to invoices for assigned matters
@@ -241,21 +198,13 @@ CREATE POLICY "Invoices - Attorney/Paralegal read/write assigned" ON invoices
   FOR ALL 
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role IN ('associate_attorney', 'paralegal')
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) IN ('associate_attorney', 'paralegal')
     AND user_has_billing_access(matter_id, 'write')
     AND user_has_financial_access('limited')
     AND deleted_at IS NULL
   )
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role IN ('associate_attorney', 'paralegal')
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) IN ('associate_attorney', 'paralegal')
     AND user_has_billing_access(matter_id, 'write')
   );
 
@@ -264,11 +213,7 @@ CREATE POLICY "Invoices - Assistant read assigned" ON invoices
   FOR SELECT 
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role = 'assistant'
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) = 'assistant'
     AND user_has_billing_access(matter_id, 'read')
     AND user_has_financial_access('client_only')
     AND deleted_at IS NULL
@@ -279,11 +224,11 @@ CREATE POLICY "Invoices - Client read own invoices" ON invoices
   FOR SELECT 
   TO authenticated
   USING (
-    EXISTS (
+    get_user_role((auth.jwt() ->> 'sub')::UUID) = 'client'
+    AND EXISTS (
       SELECT 1 FROM user_profiles up
       JOIN clients c ON c.email = up.email
-      WHERE up.uid = (auth.jwt() ->> 'sub')::UUID 
-      AND up.role = 'client'
+      WHERE up.id = (auth.jwt() ->> 'sub')::UUID 
       AND c.id = invoices.client_id
       AND c.deleted_at IS NULL
     )
@@ -301,14 +246,12 @@ CREATE POLICY "Invoice Line Items - Same access as invoice" ON invoice_line_item
     EXISTS (
       SELECT 1 FROM invoices i
       WHERE i.id = invoice_line_items.invoice_id
-      -- Access is controlled by invoice policies
     )
   )
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM invoices i
       WHERE i.id = invoice_line_items.invoice_id
-      -- Access is controlled by invoice policies
     )
   );
 
@@ -319,19 +262,11 @@ CREATE POLICY "Payments - Admin full access" ON payments
   FOR ALL 
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role = 'admin'
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) = 'admin'
     AND deleted_at IS NULL
   )
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role = 'admin'
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) = 'admin'
   );
 
 -- Attorney/Paralegal: Read/write access to payments for assigned matters
@@ -339,21 +274,13 @@ CREATE POLICY "Payments - Attorney/Paralegal read/write assigned" ON payments
   FOR ALL 
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role IN ('associate_attorney', 'paralegal')
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) IN ('associate_attorney', 'paralegal')
     AND user_has_billing_access(matter_id, 'write')
     AND user_has_financial_access('limited')
     AND deleted_at IS NULL
   )
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role IN ('associate_attorney', 'paralegal')
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) IN ('associate_attorney', 'paralegal')
     AND user_has_billing_access(matter_id, 'write')
   );
 
@@ -362,11 +289,7 @@ CREATE POLICY "Payments - Assistant read assigned" ON payments
   FOR SELECT 
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role = 'assistant'
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) = 'assistant'
     AND user_has_billing_access(matter_id, 'read')
     AND user_has_financial_access('client_only')
     AND deleted_at IS NULL
@@ -379,19 +302,11 @@ CREATE POLICY "Expenses - Admin full access" ON expenses
   FOR ALL 
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role = 'admin'
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) = 'admin'
     AND deleted_at IS NULL
   )
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role = 'admin'
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) = 'admin'
   );
 
 -- Attorney/Paralegal: Read/write access to expenses for assigned matters
@@ -399,20 +314,12 @@ CREATE POLICY "Expenses - Attorney/Paralegal read/write assigned" ON expenses
   FOR ALL 
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role IN ('associate_attorney', 'paralegal')
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) IN ('associate_attorney', 'paralegal')
     AND user_has_billing_access(matter_id, 'write')
     AND deleted_at IS NULL
   )
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role IN ('associate_attorney', 'paralegal')
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) IN ('associate_attorney', 'paralegal')
     AND user_has_billing_access(matter_id, 'write')
   );
 
@@ -421,11 +328,7 @@ CREATE POLICY "Expenses - Assistant read assigned" ON expenses
   FOR SELECT 
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role = 'assistant'
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) = 'assistant'
     AND user_has_billing_access(matter_id, 'read')
     AND deleted_at IS NULL
   );
@@ -437,19 +340,11 @@ CREATE POLICY "Time Entries - Admin full access" ON time_entries
   FOR ALL 
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role = 'admin'
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) = 'admin'
     AND deleted_at IS NULL
   )
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role = 'admin'
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) = 'admin'
   );
 
 -- Timekeeper: Read/write access to own time entries
@@ -471,21 +366,13 @@ CREATE POLICY "Time Entries - Attorney/Paralegal read/write assigned" ON time_en
   FOR ALL 
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role IN ('associate_attorney', 'paralegal')
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) IN ('associate_attorney', 'paralegal')
     AND user_has_billing_access(matter_id, 'write')
     AND user_has_financial_access('time_only')
     AND deleted_at IS NULL
   )
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-      AND role IN ('associate_attorney', 'paralegal')
-    )
+    get_user_role((auth.jwt() ->> 'sub')::UUID) IN ('associate_attorney', 'paralegal')
     AND user_has_billing_access(matter_id, 'write')
   );
 
@@ -497,9 +384,7 @@ RETURNS BOOLEAN AS $$
 DECLARE
   user_role TEXT;
 BEGIN
-  SELECT role FROM user_profiles 
-  WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-  INTO user_role;
+  user_role := get_user_role((auth.jwt() ->> 'sub')::UUID);
   
   -- Only admin and attorneys can see overall financial summaries
   RETURN user_role IN ('admin', 'associate_attorney');
@@ -513,9 +398,7 @@ DECLARE
   user_role TEXT;
   financial_access TEXT;
 BEGIN
-  SELECT role FROM user_profiles 
-  WHERE uid = (auth.jwt() ->> 'sub')::UUID 
-  INTO user_role;
+  user_role := get_user_role((auth.jwt() ->> 'sub')::UUID);
   
   SELECT get_user_permissions((auth.jwt() ->> 'sub')::UUID)->>'financial' 
   INTO financial_access;

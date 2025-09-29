@@ -135,7 +135,7 @@ export async function GET(request: NextRequest) {
       request.signal?.addEventListener('abort', cleanup)
 
       // Store cleanup function for potential future use
-      ;(controller as any).cleanup = cleanup
+      ;(controller as ReadableStreamDefaultController & { cleanup?: () => void }).cleanup = cleanup
     },
 
     cancel() {

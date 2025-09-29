@@ -28,14 +28,15 @@ interface SessionTerminateResponse {
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     // Authenticate user
     const user = await authenticate(request)
 
     // Validate session ID format (basic validation)
-    if (!params.id || params.id.length < 10) {
+    if (!id || id.length < 10) {
       return createValidationErrorResponse('sessionId', 'Invalid session ID format')
     }
 
@@ -43,13 +44,13 @@ export async function DELETE(
     const { data: session, error: sessionError } = await supabaseAdmin
       .from('user_sessions')
       .select('session_id, uid, active, created_at')
-      .eq('session_id', params.id)
+      .eq('session_id', id)
       .eq('active', true)
       .single()
 
     if (sessionError || !session) {
       await logAuditEvent('SESSION_TERMINATE_NOT_FOUND', user.uid, request, {
-        sessionId: params.id
+        sessionId: id
       })
       return createErrorResponse(
         'SESSION_NOT_FOUND',
@@ -61,7 +62,7 @@ export async function DELETE(
     // Verify the session belongs to the authenticated user
     if (session.uid !== user.uid) {
       await logAuditEvent('SESSION_TERMINATE_UNAUTHORIZED', user.uid, request, {
-        sessionId: params.id,
+        sessionId: id,
         sessionOwner: session.uid
       })
       return createErrorResponse(
@@ -78,7 +79,7 @@ export async function DELETE(
         active: false,
         ended_at: new Date().toISOString()
       })
-      .eq('session_id', params.id)
+      .eq('session_id', id)
       .eq('uid', user.uid)
 
     if (updateError) {
@@ -91,14 +92,14 @@ export async function DELETE(
     }
 
     // Determine if this was the current session
-    const isCurrentSession = params.id === user.sessionId
+    const isCurrentSession = id === user.sessionId
     const message = isCurrentSession 
       ? 'Current session terminated successfully' 
       : 'Session terminated successfully'
 
     // Log session termination
     await logAuditEvent('SESSION_TERMINATE_SUCCESS', user.uid, request, {
-      sessionId: params.id,
+      sessionId: id,
       isCurrentSession,
       sessionAge: Date.now() - new Date(session.created_at).getTime()
     })
@@ -106,7 +107,7 @@ export async function DELETE(
     const terminateResponse: SessionTerminateResponse = {
       success: true,
       message,
-      sessionId: params.id
+      sessionId: id
     }
 
     const response = createSuccessResponse(undefined, undefined, terminateResponse)

@@ -6,26 +6,21 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
 import { 
   ClipboardDocumentListIcon,
   PlusIcon,
   FunnelIcon,
   MagnifyingGlassIcon,
-  ChartBarIcon,
   ClockIcon,
-  CurrencyDollarIcon,
   ExclamationTriangleIcon,
-  CheckCircleIcon,
-  PlayIcon,
-  PauseIcon,
   EyeIcon,
   PencilSquareIcon,
   ChevronUpDownIcon,
   ArrowPathIcon,
   CalendarDaysIcon,
-  UserIcon,
   DocumentTextIcon
 } from '@heroicons/react/24/outline'
 
@@ -113,9 +108,9 @@ export default function TasksPage() {
   // Load tasks data
   useEffect(() => {
     loadTasks()
-  }, [])
+  }, [loadTasks])
 
-  const loadTasks = async () => {
+  const loadTasks = useCallback(async () => {
     try {
       setLoading(true)
       
@@ -130,9 +125,10 @@ export default function TasksPage() {
       if (billableOnly) params.append('billable_only', 'true')
       
       // Call the tasks API
+      const { data: { session } } = await supabase.auth.getSession()
       const response = await fetch(`/api/tasks?${params.toString()}`, {
         headers: {
-          'Authorization': `Bearer mock-token-development`,
+          ...(session?.access_token && { 'Authorization': `Bearer ${session.access_token}` }),
           'Content-Type': 'application/json'
         }
       })
@@ -190,7 +186,7 @@ export default function TasksPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [statusFilter, priorityFilter, matterFilter, assigneeFilter, billableOnly, overdueOnly, searchTerm])
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -267,7 +263,7 @@ export default function TasksPage() {
              matchesAssignee && matchesOverdue && matchesBillable
     })
     .sort((a, b) => {
-      let aValue: any, bValue: any
+      let aValue: string | number, bValue: string | number
       
       switch (sortBy) {
         case 'due_date':
@@ -275,9 +271,9 @@ export default function TasksPage() {
           bValue = b.due_date || '9999-12-31'
           break
         case 'priority':
-          const priorityOrder = { urgent: 4, high: 3, normal: 2, low: 1 }
-          aValue = priorityOrder[a.priority]
-          bValue = priorityOrder[b.priority]
+          const priorityOrder: Record<string, number> = { urgent: 4, high: 3, normal: 2, low: 1 }
+          aValue = priorityOrder[a.priority] || 0
+          bValue = priorityOrder[b.priority] || 0
           break
         case 'matter_number':
           aValue = a.matter.matter_number

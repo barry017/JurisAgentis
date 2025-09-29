@@ -15,13 +15,13 @@ import {
   ArrowLeftIcon,
   ShieldCheckIcon,
   LockClosedIcon,
-  UserCircleIcon,
-  CalendarIcon,
-  ClockIcon,
+  // UserCircleIcon,
+  // CalendarIcon,
+  // ClockIcon,
   CheckIcon,
   CheckBadgeIcon,
-  ExclamationTriangleIcon,
-  EyeIcon,
+  // ExclamationTriangleIcon,
+  // EyeIcon,
   MagnifyingGlassIcon,
   PlusIcon
 } from '@heroicons/react/24/outline'
@@ -179,7 +179,7 @@ export default function ClientMessagesPage() {
   const [messages, setMessages] = useState<Message[]>(mockMessages)
   const [newMessage, setNewMessage] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [_loading, _setLoading] = useState(false)
   const [filteredThreads, setFilteredThreads] = useState<MessageThread[]>(mockThreads)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
